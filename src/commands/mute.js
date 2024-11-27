@@ -83,12 +83,22 @@ module.exports = {
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed], ephemeral: false });
+      
     } catch (error) {
-      console.error('Error al silenciar al miembro:', error);
-      await interaction.reply({
-        content: 'Hubo un error al intentar silenciar al miembro.',
-        ephemeral: true,
-      });
+      console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+        .addFields(
+          { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+          { name: 'Usuario', value: interaction.user.tag, inline: true },
+          { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        )
+        .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
-  }
+  },
 };

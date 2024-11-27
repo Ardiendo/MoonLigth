@@ -11,14 +11,14 @@ module.exports = {
   
   async execute(interaction) {
     const user = interaction.options.getUser('user') || interaction.user;
-    const avatarURL = user.displayAvatarURL({ dynamic: true, size: 512 });
+    const avatarURL = user.displayAvatarURL({ dynamic: true, size: 4096 }); 
 
     const avatarEmbed = new EmbedBuilder()
-      .setColor(0x00ff00)
+      .setColor(user.accentColor || 0x00ff00) 
       .setTitle(`🖼️ Avatar de ${user.tag}`)
       .setImage(avatarURL)
       .setTimestamp()
-      .setFooter({ text: `By MoonLight | avatar de ${user.tag}`, iconURL: user.displayAvatarURL({ dynamic: true }) });
+      .setFooter({ text: `Solicitado por ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
 
     const row = new ActionRowBuilder()
       .addComponents(

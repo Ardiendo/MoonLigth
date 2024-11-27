@@ -48,16 +48,22 @@ module.exports = {
         );
       
       await interaction.reply({ embeds: [embed], components: [buttons, row] }); 
-
+      
     } catch (error) {
-      console.error('Error al obtener la información:', error);
+      console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
 
-      const embed = new EmbedBuilder()
-        .setColor('Red') 
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
         .setTitle('❌ Error')
-        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
+        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+        .addFields(
+          { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+          { name: 'Usuario', value: interaction.user.tag, inline: true },
+          { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        )
+        .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
 
-      await interaction.reply({ embeds: [embed], ephemeral: true }); 
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
-  }, 
+  },
 };

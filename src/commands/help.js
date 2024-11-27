@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, ComponentType } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -10,9 +10,9 @@ module.exports = {
       const commands = interaction.client.commands;
 
       const categories = {
-        "Moderación": [],
-        "Utilidad": [],
-        "Diversión": [] 
+        "Moderacion | 🛡️": [],
+        "Otros | 📁": [],
+        "Utilidad | 🛠️": [] 
       };
 
       commands.forEach(command => {
@@ -21,42 +21,47 @@ module.exports = {
         } else if (command.data.name === "avatar" || command.data.name === "userinfo") {
           categories["Utilidad"].push(command);
         } else {
-          categories["Diversión"].push(command); 
+          categories["Utilidad | 🛠️"].push(command); 
         }
       });
 
-      const categoryButtons = new ActionRowBuilder();
-      for (const category in categories) {
-        categoryButtons.addComponents(
-          new ButtonBuilder()
-            .setCustomId(category)
-            .setLabel(category)
-            .setStyle(ButtonStyle.Primary)
+      const selectMenu = new ActionRowBuilder()
+        .addComponents(
+          new SelectMenuBuilder()
+            .setCustomId('select-category')
+            .setPlaceholder('Selecciona una categoría')
+            .addOptions(Object.keys(categories).map(category => ({
+              label: category,
+              value: category
+            })))
         );
-      }
 
-      const initialEmbed = new EmbedBuilder()
-        .setColor(0x0099FF)
-        .setTitle('Lista de Comandos')
-        .setDescription('Selecciona una categoría para ver los comandos.')
-        .setThumbnail(interaction.client.user.displayAvatarURL());
-
-      const reply = await interaction.reply({ embeds: [initialEmbed], components: [categoryButtons] });
-
-      const collector = reply.createMessageComponentCollector({ time: 60000 });
-
+        const initialEmbed = new EmbedBuilder()
+        .setColor("Random")
+        .setTitle('❔ Lista de Comandos')
+        .setDescription('Selecciona una categoría del menú desplegable para ver los comandos disponibles.')
+        .setThumbnail(interaction.client.user.displayAvatarURL())
+        .setFooter({ text: `Solicitado por ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+      
+      const reply = await interaction.reply({ embeds: [initialEmbed], components: [selectMenu], fetchReply: true });
+      
+      const collector = reply.createMessageComponentCollector({ componentType: ComponentType.SelectMenu, time: 60000 });
+      
       collector.on('collect', async i => {
         if (i.user.id === interaction.user.id) {
-          const category = i.customId;
+          await i.deferUpdate(); 
+      
+          const category = i.values[0];
           const categoryCommands = categories[category];
-
+      
           const categoryEmbed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Comandos de ${category}`)
+            .setColor("Random")
+            .setTitle(`📂 Comandos de ${category}`)
             .setDescription(categoryCommands.map(command => `**/${command.data.name}**: ${command.data.description}`).join('\n'))
-            .setThumbnail(interaction.client.user.displayAvatarURL());
-
-          await i.update({ embeds: [categoryEmbed], components: [] });
+            .setThumbnail(interaction.client.user.displayAvatarURL())
+            .setFooter({ text: `Solicitado por ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+      
+          await i.editReply({ embeds: [categoryEmbed], components: [] });
         } else {
           await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
         }
@@ -64,15 +69,22 @@ module.exports = {
 
       collector.on('end', collected => console.log(`Se recogieron ${collected.size} interacciones.`));
 
-    } catch (error) {
-      console.error('Error al ejecutar el comando:', error);
+   
+  } catch (error) {
+    console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`); 
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor('Red')
-        .setTitle('❌ Error')
-        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
+    const errorEmbed = new EmbedBuilder()
+      .setColor('Red')
+      .setTitle('❌ Error')
+      .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+      .addFields(
+        { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+        { name: 'Usuario', value: interaction.user.tag, inline: true },
+        { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+      )
+      .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
 
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-    }
-  },
+    await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+},
 };
