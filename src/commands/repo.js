@@ -11,7 +11,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('update')
-        .setDescription('Actualiza MoonLigth desde el repositorio de GitHub.'))
+        .setDescription('Actualiza el bot desde el repositorio de GitHub.'))
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
@@ -42,7 +42,7 @@ module.exports = {
         .setColor('Red')
         .setTitle('❌ Error')
         .setDescription('No tienes permiso para ejecutar este comando.')
-        .setImage(interaction.user.displayAvatarURL());
+        .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() });
       await interaction.reply({ embeds: [embed], ephemeral: true });
       return;
     }
@@ -53,11 +53,10 @@ module.exports = {
       const git = simpleGit();
 
       if (subcommand === 'update') {
-        // Preguntar al usuario si desea continuar con la actualización
         const confirmationEmbed = new EmbedBuilder()
           .setColor('Yellow')
           .setTitle('⚠️ Confirmar actualización')
-          .setDescription('¿Estás seguro de que quieres actualizar MoonLigth? Esto puede tardar unos minutos.');
+          .setDescription('¿Estás seguro de que quieres actualizar el bot? Esto puede tardar unos minutos.');
 
         const confirmationButtons = new ActionRowBuilder()
           .addComponents(
@@ -78,7 +77,7 @@ module.exports = {
         collector.on('collect', async i => {
           if (i.user.id === interaction.user.id) {
             if (i.customId === 'confirmar-update') {
-              await i.update({ content: 'Actualizando MoonLigth... esto puede tardar unos minutos.', embeds: [], components: [] });
+              await i.update({ content: 'Actualizando el bot... esto puede tardar unos minutos.', embeds: [], components: [] });
 
               try {
                 const status = await git.status();
@@ -88,43 +87,25 @@ module.exports = {
                 }
 
                 await git.pull();
-
-                await new Promise((resolve, reject) => {
-                  exec('npm install', (error, stdout, stderr) => {
-                    if (error) {
-                      console.error(`Error al instalar dependencias: ${error}`);
-                      reject(error);
-                      return;
-                    }
-                    console.log(`stdout: ${stdout}`);
-                    console.error(`stderr: ${stderr}`);
-                    resolve();
-                  });
-                });
-
-                await new Promise((resolve, reject) => {
-                  exec('pm2 restart moon.js', (error, stdout, stderr) => {
-                    if (error) {
-                      console.error(`Error al reiniciar el bot: ${error}`);
-                      reject(error);
-                      return;
-                    }
-                    console.log(`stdout: ${stdout}`);
-                    console.error(`stderr: ${stderr}`);
-                    resolve();
-                  });
-                });
+                await exec('npm install');
+                await exec('pm2 restart moon.js');
 
                 const lastCommit = await git.log({ maxCount: 1 });
                 const embed = new EmbedBuilder()
-                  .setColor(0x0099FF)
-                  .setTitle('✅ MoonLigth actualizado con éxito!')
-                  .setDescription(`**Último commit:** ${lastCommit.latest.hash.substring(0, 7)} - ${lastCommit.latest.message}`);
+                  .setColor('Green')
+                  .setTitle('✅ Bot actualizado con éxito!')
+                  .setDescription(`**Último commit:** ${lastCommit.latest.hash.substring(0, 7)} - ${lastCommit.latest.message}`)
+                  .setTimestamp();
 
                 await interaction.editReply({ content: null, embeds: [embed] });
               } catch (error) {
                 console.error('Error al actualizar el bot:', error);
-                await interaction.editReply('❌ Hubo un error al actualizar el bot.');
+                const errorEmbed = new EmbedBuilder()
+                  .setColor('Red')
+                  .setTitle('❌ Error al actualizar')
+                  .setDescription(`Hubo un error al actualizar el bot: ${error.message}`)
+                  .setTimestamp();
+                await interaction.editReply({ content: null, embeds: [errorEmbed] });
               }
             } else if (i.customId === 'cancelar-update') {
               await i.update({ content: 'Actualización cancelada.', embeds: [], components: [] });
@@ -142,12 +123,13 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('Blue')
           .setTitle('Estado del repositorio')
-          .setDescription(`
-            **Rama actual:** ${status.current}\n
-            **Archivos modificados:** ${status.modified.length}\n
-            **Archivos nuevos:** ${status.not_added.length}\n
-            **Archivos eliminados:** ${status.deleted.length}\n
-          `);
+          .addFields(
+            { name: 'Rama actual', value: status.current, inline: true },
+            { name: 'Archivos modificados', value: status.modified.length.toString(), inline: true },
+            { name: 'Archivos nuevos', value: status.not_added.length.toString(), inline: true },
+            { name: 'Archivos eliminados', value: status.deleted.length.toString(), inline: true },
+          )
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
       } else if (subcommand === 'commit') {
@@ -159,7 +141,8 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('Green')
           .setTitle('Commit realizado')
-          .setDescription(`Cambios confirmados con el mensaje: "${mensaje}"`);
+          .setDescription(`Cambios confirmados con el mensaje: "${mensaje}"`)
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
       } else if (subcommand === 'reset') {
@@ -168,7 +151,8 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('Yellow')
           .setTitle('Reset realizado')
-          .setDescription('Se han revertido los cambios al último commit.');
+          .setDescription('Se han revertido los cambios al último commit.')
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
       } else if (subcommand === 'log') {
@@ -177,7 +161,8 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('Blue')
           .setTitle('Historial de commits')
-          .setDescription(log.all.map(commit => `**${commit.hash.substring(0, 7)}** - ${commit.message}`).join('\n'));
+          .setDescription(log.all.map(commit => `**${commit.hash.substring(0, 7)}** - ${commit.message} - ${commit.author_name} <t:${Math.round(commit.date.getTime() / 1000)}:R>`).join('\n'))
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
       }
@@ -187,7 +172,8 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('Red')
         .setTitle('❌ Error')
-        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
+        .setDescription(`Hubo un error al ejecutar el comando: ${error.message}`)
+        .setTimestamp();
 
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
