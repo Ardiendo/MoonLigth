@@ -13,7 +13,7 @@ module.exports = {
       const developerId = process.env.DEVELOPER_ID;
 
       const embed = new EmbedBuilder()
-        .setColor(0x0099FF)
+        .setColor("Random")
         .setTitle(`Información de ${usuario.tag}`)
         .setThumbnail(usuario.displayAvatarURL())
         .setDescription(`Aquí tienes tu información en el servidor **${guild.name}**:`); 
@@ -41,7 +41,7 @@ module.exports = {
           if (i.customId === 'avatar') {
             
             const avatarEmbed = new EmbedBuilder()
-              .setColor(0x0099FF)
+              .setColor("Random")
               .setTitle(`Avatar de ${usuario.tag}`)
               .setImage(usuario.displayAvatarURL({ dynamic: true, size: 4096 }));
 
@@ -49,7 +49,7 @@ module.exports = {
           } else if (i.customId === 'info') {
             
             const infoEmbed = new EmbedBuilder()
-              .setColor('Random')
+              .setColor("Random")
               .setTitle(`Información de ${usuario.tag}`)
               .addFields(
                 { name: 'Nombre', value: usuario.username, inline: true },
@@ -89,8 +89,20 @@ module.exports = {
 
       collector.on('end', collected => console.log(`Se recogieron ${collected.size} interacciones.`));
     } catch (error) {
-      console.error('Error al ejecutar el comando:', error);
-      await interaction.reply({ content: 'Hubo un error al ejecutar el comando.', ephemeral: true });
+      console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+        .addFields(
+          { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+          { name: 'Usuario', value: interaction.user.tag, inline: true },
+          { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        )
+        .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
   },
 };
