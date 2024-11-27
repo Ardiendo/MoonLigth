@@ -28,7 +28,7 @@ module.exports = {
                 new ButtonBuilder()
                 .setDisabled(true)
                     .setLabel('Unirse al Servidor')
-                    .setURL(guild.vanityURLCode ? `https://discord.gg/${guild.vanityURLCode}` : '') 
+                    .setURL(guild.vanityURLCode ? `https://discord.gg/${guild.vanityURLCode}` : 'https://discord.gg/Q7yZPaF5Xm') 
                     .setStyle(ButtonStyle.Link),
             );
 

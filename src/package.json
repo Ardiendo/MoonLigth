@@ -1,10 +1,12 @@
 {
   "dependencies": {
     "@discordjs/rest": "^2.4.0",
+    "child_process": "^1.0.2",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
+    "simple-git": "^3.27.0",
     "winston": "^3.17.0"
   }
 }

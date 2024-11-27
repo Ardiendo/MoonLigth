@@ -44,7 +44,7 @@ module.exports = {
           });
         });
 
-        // Reiniciar el bot con pm2
+        
         await new Promise((resolve, reject) => {
           exec('pm2 restart moon.js', (error, stdout, stderr) => {
             if (error) {
