@@ -6,16 +6,13 @@ const { Routes } = require('discord-api-types/v9');
 const fs = require('node:fs');
 const winston = require('winston');
 const path = require('path');
-
+const { version } = require('node:os');
 const token = process.env.TOKEN;
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-
-
 const commands = [];
 const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -43,11 +40,10 @@ const client = new Client({
 
 const Dev = '_.aari._';
 
-const MoonLigthVersion = '1.0.0';
+const MoonLigthVersion = '1.1';
 
 
 client.commands = new Collection();
-
 
 for (const file of commandFiles) {
   try {
@@ -55,10 +51,22 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
     commands.push(command.data.toJSON());
   } catch (error) {
-    logger.error(`Error al cargar el comando ${file}:`, error);
-  }
-}
+    console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
 
+    const errorEmbed = new EmbedBuilder()
+      .setColor('Red')
+      .setTitle('❌ Error')
+      .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+      .addFields(
+        { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+        { name: 'Usuario', value: interaction.user.tag, inline: true },
+        { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+      )
+      .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+
+    await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+};
 
 const logger = winston.createLogger({
   level: 'info',
@@ -118,9 +126,8 @@ let currentActivity = 0;
 function updatePresence() {
   const activity = activities[currentActivity];
 
-  
   if (activity.name === 'By: Ardiendo') {
-    activity.name = `By: Ardiendo | ${client.guilds.cache.size} servidores`; 
+    activity.name = `By: Ardiendo | ${client.guilds.cache.size} servidores`;
   }
 
   client.user.setPresence({
@@ -139,25 +146,27 @@ setInterval(updatePresence, 60 * 60 * 1000);
     
     if (channel) {
       const embed = new EmbedBuilder()
-        .setTitle(`${Dev} | Start Finish...`)
-        .setColor('Random')
-        .setDescription(`${bot.tag} | ONLINE `) 
-        .setThumbnail(bot.displayAvatarURL())
-        .setFooter({ text: 'Bot by Ardiendo', iconURL: bot.displayAvatarURL() }, `Version: ${MoonLigthVersion}`)
-        .setTimestamp()
-    
-      channel.send({ embeds: [embed] });
-    } else {
+  .setColor("Random") 
+  .setTitle(`✅ ``${Dev}`` | Inicio completado`) 
+  .setDescription(`${bot.tag} está **ONLINE**!`) 
+  .setThumbnail(bot.displayAvatarURL())
+  .addFields(
+    { name: 'Versión', value: MoonLigthVersion, inline: true }, // Campo para la versión
+    { name: 'Servidor', value: interaction.guild.name, inline: true }, // Campo para el servidor
+  )
+  .setTimestamp()
+  .setFooter({ text: 'Dev of MoongLigth |' `${Dev}`, iconURL: bot.displayAvatarURL() }); 
+
+channel.send({ embeds: [embed] });
       logger.warn('No se pudo encontrar el canal para enviar el mensaje de inicio.');
-    }
+ }
     
     logger.info('✅ Rich Presence configurada.');
-
-  } catch (error) {
+ } catch (error) {
     logger.error('❌ Ya la hemos liao:', error);
   
     
-    const debuggingChannelId = '1290516437533986891'; 
+    const debuggingChannelId = '1290516437533986891';
     const debuggingChannel = client.channels.cache.get(debuggingChannelId);
   
     if (debuggingChannel) {
@@ -166,11 +175,10 @@ setInterval(updatePresence, 60 * 60 * 1000);
         .setTitle('Error en el evento "ready"')
         .setDescription(`Se ha producido un error al iniciar el bot: ${error.message}`)
         .setTimestamp();
-  
-      debuggingChannel.send({ embeds: [embed] });
+ debuggingChannel.send({ embeds: [embed] });
     } else {
       logger.warn('No se pudo encontrar el canal de depuración para enviar el mensaje de error.');
-    }
+ }
   
     
     if (error.name === 'MoonLigth | Error Ready') { 
@@ -200,11 +208,23 @@ client.on('interactionCreate', async interaction => {
 
     try {
       await interaction.reply({ embeds: [embed], ephemeral: true });
-    } catch (errorReply) {
-      console.error('Error al enviar el mensaje de error:', errorReply);
-      logger.error('Error al enviar el mensaje de error:', errorReply);
-    }
-  }
-});
+    } catch (error) {
+      console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+        .addFields(
+          { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
+          { name: 'Usuario', value: interaction.user.tag, inline: true },
+          { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+        )
+        .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    } 
+  }}
+);
 
 client.login(token);
