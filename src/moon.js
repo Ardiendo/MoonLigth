@@ -51,22 +51,26 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
     commands.push(command.data.toJSON());
   } catch (error) {
-    console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
+    console.error(`\n❌ Error al cargar el comando ${file}: \n${error}\n`);
 
-    const errorEmbed = new EmbedBuilder()
-      .setColor('Red')
-      .setTitle('❌ Error')
-      .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
-      .addFields(
-        { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
-        { name: 'Usuario', value: interaction.user.tag, inline: true },
-        { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-      )
-      .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
-
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    
+    const loggingChannelId = '1294566335933845525'; 
+    const loggingChannel = client.channels.cache.get(loggingChannelId);
+    if (loggingChannel) {
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error al cargar comando')
+        .setDescription(`Hubo un error al cargar el comando \`${file}\`.`)
+        .addFields(
+          { name: 'Error', value: error.message, inline: false },
+          { name: 'Comando', value: file, inline: false},
+          { name: 'Versión de Discord.js', value: 'Discord.js v14',},
+        )
+        .setTimestamp();
+      loggingChannel.send({ embeds: [errorEmbed] });
+    }
   }
-};
+}
 
 const logger = winston.createLogger({
   level: 'info',
