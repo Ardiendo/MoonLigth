@@ -6,12 +6,13 @@ module.exports = {
     .setDescription('Muestra la lista de comandos y su descripción.'),
 
   async execute(interaction) {
-    try { 
+    try {
       const commands = interaction.client.commands;
 
       const categories = {
         "Moderación": [],
         "Utilidad": [],
+        "Diversión": [] 
       };
 
       commands.forEach(command => {
@@ -20,7 +21,7 @@ module.exports = {
         } else if (command.data.name === "avatar" || command.data.name === "userinfo") {
           categories["Utilidad"].push(command);
         } else {
-          categories["Diversión"].push(command);
+          categories["Diversión"].push(command); 
         }
       });
 
@@ -63,7 +64,7 @@ module.exports = {
 
       collector.on('end', collected => console.log(`Se recogieron ${collected.size} interacciones.`));
 
-    } catch (error) { 
+    } catch (error) {
       console.error('Error al ejecutar el comando:', error);
 
       const errorEmbed = new EmbedBuilder()
