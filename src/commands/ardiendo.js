@@ -13,6 +13,7 @@ module.exports = {
     try {
       const developer = await interaction.guild.members.fetch(developerId);
       const bot = interaction.client.user;
+
       const embed = new EmbedBuilder()
         .setTitle(`Info de ${DEVELOPER_TAG}`)
         .setColor("Random")

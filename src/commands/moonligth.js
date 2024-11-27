@@ -1,41 +1,64 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, userMention } = require('discord.js');
+
+
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+require('dotenv').config();
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('moonligth')
-        .setDescription('Muestra información del servidor'),
-    async execute(interaction) {
-        const guild = interaction.guild; 
-        const embed = new EmbedBuilder()
-            .setColor('Random')
-            .setTitle(`Información del servidor: ${guild.name} | for ${userMention} `)
-            .setThumbnail(guild.iconURL())
-            .setDescription(`**Descripción:** ${guild.description || 'No Info / No description.'}`)
-            .addFields(
-                { name: 'Miembros', value: `${guild.memberCount}`, inline: true },
-                { name: 'Canales', value: `${guild.channels.cache.size}`, inline: true },
-                { name: 'Roles', value: `${guild.roles.cache.size}`, inline: true },
-                { name: 'Emojis', value: `${guild.emojis.cache.size}`, inline: true },
-                { name: 'Stickers', value: `${guild.stickers.cache.size}`, inline: true },
-                { name: 'Creado el', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>`, inline: true },
-                { name: 'Dueño', value: `<@${guild.ownerId}>`, inline: true },
-                { name: 'Nivel de verificación', value: `${guild.verificationLevel}`, inline: true },
-                { name: 'Nivel de boost', value: `${guild.premiumTier}`, inline: true },
-            );
-            const row = new ActionRowBuilder()
+  data: new SlashCommandBuilder()
+    .setName('moonligth')
+    .setDescription('Muestra información detallada de MoonLigth'),
+
+  async execute(interaction) {
+    try {
+      const bot = interaction.client.user;
+      const developerId = process.env.DEVELOPER_ID;
+      const DEVELOPER_TAG = process.env.DEVELOPER_TAG;
+      const developer = await interaction.guild.members.fetch(developerId);
+
+      const embed = new EmbedBuilder()
+        .setColor('Random')
+        .setTitle(`Información de MoonLigth`)
+        .setThumbnail(bot.displayAvatarURL())
+        .addFields(
+          { name: 'Nombre', value: `${bot.tag}`, inline: true },
+          { name: 'ID', value: `${bot.id}`, inline: true },
+          { name: 'Creado', value: `<t:${Math.floor(bot.createdTimestamp / 1000)}:D>`, inline: true },
+          { name: 'Desarrollador', value: `${DEVELOPER_TAG}`, inline: true },
+          { name: 'ID del Desarrollador', value: `${developer.user.id}`, inline: true },
+          { name: 'Lenguaje', value: 'JavaScript', inline: true },
+          { name: 'Librería', value: 'discord.js', inline: true },
+          { name: 'Prefijo', value: '/', inline: true }, 
+          { name: 'Descripción', value: 'MoonLigth es un bot multipropósito que ofrece una variedad de comandos útiles y divertidos para mejorar tu experiencia en Discord.', inline: false },
+        );
+
+      const buttons = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setLabel('Invitar a MoonLigth')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://discord.com/oauth2/authorize?client_id=1259146338516471879&permissions=all&scope=bot&permissions=8'), 
+        );
+
+        const row = new ActionRowBuilder()
             .addComponents(
               new ButtonBuilder()
                 .setDisabled(false)
                 .setLabel('Yumi | MoonLigth Support SV')
                 .setURL(guild.vanityURLCode ? `https://discord.gg/${guild.vanityURLCode}` : 'https://discord.gg/vZyQ3u5re2')
                 .setStyle(ButtonStyle.Link),
-              new ButtonBuilder() 
-              .setDisabled(true)
-                .setLabel('Private Repository | MoonLigth')
-                .setURL('https://github.com/Ardiendo/MoonLigth') 
-                .setStyle(ButtonStyle.Link),
+              new ButtonBuilder()
             );
+        await interaction.reply({ embeds: [embed], components: [buttons,] [row] });
 
-        await interaction.reply({ embeds: [embed], components: [row] });
+    } catch (error) {
+        console.error('Error al obtener la información:', error);
+  
+        const embed = new EmbedBuilder()
+          .setColor('Red') 
+          .setTitle('❌ Error')
+          .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
+  
+        await interaction.reply({ embeds: [embed], ephemeral: true }); 
+      }
     },
-};
+  };
