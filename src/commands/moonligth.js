@@ -1,5 +1,3 @@
-
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
@@ -8,12 +6,13 @@ module.exports = {
     .setName('moonligth')
     .setDescription('Muestra información detallada de MoonLigth'),
 
-  async execute(interaction) {
+  async execute(interaction) { 
     try {
       const bot = interaction.client.user;
       const developerId = process.env.DEVELOPER_ID;
       const DEVELOPER_TAG = process.env.DEVELOPER_TAG;
       const developer = await interaction.guild.members.fetch(developerId);
+      const guild = interaction.guild; 
 
       const embed = new EmbedBuilder()
         .setColor('Random')
@@ -39,26 +38,26 @@ module.exports = {
             .setURL('https://discord.com/oauth2/authorize?client_id=1259146338516471879&permissions=all&scope=bot&permissions=8'), 
         );
 
-        const row = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setDisabled(false)
-                .setLabel('Yumi | MoonLigth Support SV')
-                .setURL(guild.vanityURLCode ? `https://discord.gg/${guild.vanityURLCode}` : 'https://discord.gg/vZyQ3u5re2')
-                .setStyle(ButtonStyle.Link),
-              new ButtonBuilder()
-            );
-        await interaction.reply({ embeds: [embed], components: [buttons,] [row] });
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setDisabled(false)
+            .setLabel('Yumi | MoonLigth Support SV')
+            .setURL(guild.vanityURLCode ? `https://discord.gg/${guild.vanityURLCode}` : 'https://discord.gg/vZyQ3u5re2')
+            .setStyle(ButtonStyle.Link),
+        );
+      
+      await interaction.reply({ embeds: [embed], components: [buttons, row] }); 
 
     } catch (error) {
-        console.error('Error al obtener la información:', error);
-  
-        const embed = new EmbedBuilder()
-          .setColor('Red') 
-          .setTitle('❌ Error')
-          .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
-  
-        await interaction.reply({ embeds: [embed], ephemeral: true }); 
-      }
-    },
-  };
+      console.error('Error al obtener la información:', error);
+
+      const embed = new EmbedBuilder()
+        .setColor('Red') 
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.');
+
+      await interaction.reply({ embeds: [embed], ephemeral: true }); 
+    }
+  }, 
+};
