@@ -5,13 +5,14 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const fs = require('node:fs');
 const winston = require('winston');
+const path = require('path'); 
 
 const token = process.env.TOKEN;
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 
 const commands = [];
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js')); // Utiliza path.join
 
 const client = new Client({
   intents: [
@@ -64,54 +65,51 @@ const logger = winston.createLogger({
 const rest = new REST({ version: '10' }).setToken(token);
 
 client.on('ready', async () => {
-    try {
-      logger.info(`¡Conectado como ${client.user.tag}!`);
-  
-     
-      if (process.env.NODE_ENV === 'development') {
-        logger.info('🚀 Iniciando la actualización de comandos (solo en desarrollo)...');
-  
-        
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-        logger.info('🗑️ Comandos antiguos eliminados del servidor.');
-  
-        
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-        logger.info('✅ Comandos actualizados en el servidor con éxito.');
-      }
-  
-      
-      client.user.setPresence({
-        activities: [
-          { name: 'By: Ardiendo', type: ActivityType.Playing },
-          { name: 'Ticket system | Coming soon...', type: ActivityType.Watching }
-        ],
-        status: 'dnd',
-      });
-      logger.info('✅ Rich Presence configurada.');
-    } catch (error) {
-      logger.error('❌ Error al actualizar los comandos o configurar Rich Presence:', error);
+  try {
+    logger.info(`¡Conectado como ${client.user.tag}!`);
+
+    if (process.env.NODE_ENV === 'development') {
+      logger.info('🚀 Iniciando la actualización de comandos (solo en desarrollo)...');
+
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
+      logger.info('🗑️ Comandos antiguos eliminados del servidor.');
+
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+      logger.info('✅ Comandos actualizados en el servidor con éxito.');
     }
-  });
+
+    client.user.setPresence({
+      activities: [
+        { name: 'By: Ardiendo', type: ActivityType.Playing },
+        { name: 'Ticket system | Coming soon...', type: ActivityType.Watching }
+      ],
+      status: 'dnd',
+    });
+    logger.info('✅ Rich Presence configurada.');
+  } catch (error) {
+    logger.error('❌ Error al actualizar los comandos o configurar Rich Presence:', error);
+  }
+});
+
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
+  if (!interaction.isChatInputCommand()) return;
 
-    const command = client.commands.get(interaction.commandName);
+  const command = client.commands.get(interaction.commandName);
 
-    if (!command) return;
+  if (!command) return;
 
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(error);
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    console.error(error);
 
-        const embed = new EmbedBuilder()
-            .setColor(0xFF0000)
-            .setTitle('Error')
-            .setDescription('Hubo un error al ejecutar este comando! contacta con los developers');
+    const embed = new EmbedBuilder()
+      .setColor(0xFF0000)
+      .setTitle('Error')
+      .setDescription('Hubo un error al ejecutar este comando! contacta con los developers');
 
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-    }
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  }
 });
 
 client.login(token);

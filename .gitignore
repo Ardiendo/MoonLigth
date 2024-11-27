@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Configuración del bot de Discord
+config.js        # Archivo de configuración (opcional)
+.env             # Variables de entorno (token, IDs, etc.)
+
+# Archivos de datos (opcional)
+data/            # Carpeta para almacenar datos del bot
