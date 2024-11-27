@@ -72,11 +72,13 @@ module.exports = {
           .addFields({ name: 'Moderador', value: interaction.user.tag, inline: true })
           .setTimestamp();
         await webhookClient.send({ embeds: [embed] });
+        
 
         await interaction.reply({ content: `Se ha quitado el tiempo de espera de ${usuario}.`, ephemeral: true });
       } catch (error) {
         console.error(`\n❌ Error al quitar el tiempo de espera: \n${error}\n`);
         await interaction.reply({ content: 'Hubo un error al quitar el tiempo de espera.', ephemeral: true });
+        
       }
     }
   },

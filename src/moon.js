@@ -64,7 +64,7 @@ for (const file of commandFiles) {
       )
       .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
 
-    await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 };
 
