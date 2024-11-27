@@ -81,32 +81,56 @@ client.on('ready', async () => {
   try {
     logger.info(`¡Conectado como ${client.user.tag}!`);
 
-    const bot = client.user; 
-
     if (NODE_ENV === 'development') {
-      logger.info('🚀 Actualizando comandos...');
+      logger.info('🚀 Actualizando comandos globalmente...');
 
       try {
         
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] }); 
         logger.info('🗑️ Comandos antiguos: eliminados del servidor.');
 
         
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-        logger.info('✅ Comandos actualizados en el servidor con éxito.');
+        await rest.put(
+          Routes.applicationCommands(clientId),
+          { body: commands },
+        );
+
+        logger.info('✅ Comandos actualizados globalmente con éxito.');
       } catch (error) {
-        logger.error('❌ Error al actualizar los comandos:', error);
+        logger.error('❌ Error al actualizar los comandos globalmente:', error);
       }
     }
 
-    client.user.setPresence({
-      activities: [
-        { name: 'By: Ardiendo', type: ActivityType.Playing },
-        { name: 'Ticket system | Coming soon...', type: ActivityType.Watching }
-      ],
-      status: 'dnd',
-    });
-    
+    const { ActivityType } = require('discord.js');
+
+const activities = [
+  { name: 'By: Ardiendo', type: ActivityType.Playing },
+  { name: 'discord.gg/vZyQ3u5re2', type: ActivityType.Competing },
+  { name: 'Ticket system | Coming soon...', type: ActivityType.Watching },
+  { name: '/help para ver mis comandos', type: ActivityType.Listening }, 
+  
+];
+
+let currentActivity = 0;
+
+function updatePresence() {
+  const activity = activities[currentActivity];
+
+  
+  if (activity.name === 'By: Ardiendo') {
+    activity.name = `By: Ardiendo | ${client.guilds.cache.size} servidores`; 
+  }
+
+  client.user.setPresence({
+    activities: [activity],
+    status: 'dnd',
+  });
+
+  currentActivity = (currentActivity + 1) % activities.length;
+}
+
+updatePresence(); 
+setInterval(updatePresence, 60 * 60 * 1000); 
     
     const channelId = '1294566335933845525'; 
     const channel = client.channels.cache.get(channelId);
@@ -128,7 +152,7 @@ client.on('ready', async () => {
     logger.info('✅ Rich Presence configurada.');
 
   } catch (error) {
-    logger.error('❌ Error en el evento "ready":', error);
+    logger.error('❌ Ya la hemos liao:', error);
   
     
     const debuggingChannelId = '1290516437533986891'; 
