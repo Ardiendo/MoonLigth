@@ -42,7 +42,7 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Cargar comandos con manejo de errores
+
 for (const file of commandFiles) {
   try {
     const command = require(`./commands/${file}`);
@@ -79,11 +79,11 @@ client.on('ready', async () => {
       logger.info('🚀 Actualizando comandos (solo en desarrollo)...');
 
       try {
-        // Eliminar comandos existentes
+        
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
         logger.info('🗑️ Comandos antiguos eliminados del servidor.');
 
-        // Registrar nuevos comandos
+        
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
         logger.info('✅ Comandos actualizados en el servidor con éxito.');
       } catch (error) {
@@ -98,6 +98,23 @@ client.on('ready', async () => {
       ],
       status: 'dnd',
     });
+    
+    
+    const channelId = '1294566335933845525'; 
+    const channel = client.channels.cache.get(channelId);
+    
+    if (channel) {
+      const embed = new EmbedBuilder()
+        .setColor(0x0099FF)
+        .setTitle('¡Estoy listo!')
+        .setDescription('MoonLigth se ha iniciado correctamente y está listo para usar.')
+        .setTimestamp();
+    
+      channel.send({ embeds: [embed] });
+    } else {
+      logger.warn('No se pudo encontrar el canal para enviar el mensaje de inicio.');
+    }
+    
     logger.info('✅ Rich Presence configurada.');
 
   } catch (error) {
