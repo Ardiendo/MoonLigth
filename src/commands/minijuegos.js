@@ -75,7 +75,7 @@ module.exports = {
         botMano.push(repartirCarta(), repartirCarta());
 
         const embed = new EmbedBuilder()
-          .setColor(0x0099FF)
+          .setColor('Random')
           .setTitle('Blackjack')
           .setDescription(`
             **Tu mano:** ${jugadorMano.join(' ')} (${calcularMano(jugadorMano)})\n

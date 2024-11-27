@@ -79,7 +79,7 @@ async function crearTicket(interaction) {
   });
 
   const embed = new EmbedBuilder()
-    .setColor(0x0099FF)
+    .setColor('Random')
     .setTitle('Nuevo Ticket')
     .setDescription('Describe tu problema o solicitud aquí. Un miembro del personal te atenderá en breve.');
 
@@ -137,7 +137,7 @@ async function enviarPanel(interaction) {
   const canal = interaction.options.getChannel('canal');
 
   const embed = new EmbedBuilder()
-    .setColor(0x0099FF)
+    .setColor('Random')
     .setTitle('Crear un Ticket')
     .setDescription('Haz clic en el botón de abajo para abrir un nuevo ticket.');
 

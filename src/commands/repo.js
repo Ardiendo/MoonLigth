@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const simpleGit = require('simple-git');
 const { exec } = require('child_process');
 require('dotenv').config();
@@ -53,52 +53,90 @@ module.exports = {
       const git = simpleGit();
 
       if (subcommand === 'update') {
-        await interaction.reply('Actualizando MoonLigth... esto puede tardar unos minutos.');
+        // Preguntar al usuario si desea continuar con la actualización
+        const confirmationEmbed = new EmbedBuilder()
+          .setColor('Yellow')
+          .setTitle('⚠️ Confirmar actualización')
+          .setDescription('¿Estás seguro de que quieres actualizar MoonLigth? Esto puede tardar unos minutos.');
 
-        const status = await git.status();
-        if (!status.isClean()) {
-          await interaction.editReply('⚠️ Hay cambios sin confirmar en el repositorio. Por favor, confirma o descarta los cambios antes de actualizar.');
-          return;
-        }
+        const confirmationButtons = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('confirmar-update')
+              .setLabel('Confirmar')
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setCustomId('cancelar-update')
+              .setLabel('Cancelar')
+              .setStyle(ButtonStyle.Danger),
+          );
 
-        await git.pull();
+        const confirmationReply = await interaction.reply({ embeds: [confirmationEmbed], components: [confirmationButtons] });
 
-        await new Promise((resolve, reject) => {
-          exec('npm install', (error, stdout, stderr) => {
-            if (error) {
-              console.error(`Error al instalar dependencias: ${error}`);
-              reject(error);
-              return;
+        const collector = confirmationReply.createMessageComponentCollector({ time: 60000 });
+
+        collector.on('collect', async i => {
+          if (i.user.id === interaction.user.id) {
+            if (i.customId === 'confirmar-update') {
+              await i.update({ content: 'Actualizando MoonLigth... esto puede tardar unos minutos.', embeds: [], components: [] });
+
+              try {
+                const status = await git.status();
+                if (!status.isClean()) {
+                  await interaction.editReply('⚠️ Hay cambios sin confirmar en el repositorio. Por favor, confirma o descarta los cambios antes de actualizar.');
+                  return;
+                }
+
+                await git.pull();
+
+                await new Promise((resolve, reject) => {
+                  exec('npm install', (error, stdout, stderr) => {
+                    if (error) {
+                      console.error(`Error al instalar dependencias: ${error}`);
+                      reject(error);
+                      return;
+                    }
+                    console.log(`stdout: ${stdout}`);
+                    console.error(`stderr: ${stderr}`);
+                    resolve();
+                  });
+                });
+
+                await new Promise((resolve, reject) => {
+                  exec('pm2 restart moon.js', (error, stdout, stderr) => {
+                    if (error) {
+                      console.error(`Error al reiniciar el bot: ${error}`);
+                      reject(error);
+                      return;
+                    }
+                    console.log(`stdout: ${stdout}`);
+                    console.error(`stderr: ${stderr}`);
+                    resolve();
+                  });
+                });
+
+                const lastCommit = await git.log({ maxCount: 1 });
+                const embed = new EmbedBuilder()
+                  .setColor(0x0099FF)
+                  .setTitle('✅ MoonLigth actualizado con éxito!')
+                  .setDescription(`**Último commit:** ${lastCommit.latest.hash.substring(0, 7)} - ${lastCommit.latest.message}`);
+
+                await interaction.editReply({ content: null, embeds: [embed] });
+              } catch (error) {
+                console.error('Error al actualizar el bot:', error);
+                await interaction.editReply('❌ Hubo un error al actualizar el bot.');
+              }
+            } else if (i.customId === 'cancelar-update') {
+              await i.update({ content: 'Actualización cancelada.', embeds: [], components: [] });
             }
-            console.log(`stdout: ${stdout}`);
-            console.error(`stderr: ${stderr}`);
-            resolve();
-          });
+          } else {
+            await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
+          }
         });
 
-        await new Promise((resolve, reject) => {
-          exec('pm2 restart moon.js', (error, stdout, stderr) => {
-            if (error) {
-              console.error(`Error al reiniciar el bot: ${error}`);
-              reject(error);
-              return;
-            }
-            console.log(`stdout: ${stdout}`);
-            console.error(`stderr: ${stderr}`);
-            resolve();
-          });
-        });
+        collector.on('end', collected => console.log(`Se recogieron ${collected.size} interacciones.`));
 
-        const lastCommit = await git.log({ maxCount: 1 });
-        const embed = new EmbedBuilder()
-          .setColor(0x0099FF)
-          .setTitle('✅ MoonLigth actualizado con éxito!')
-          .setDescription(`**Último commit:** ${lastCommit.latest.hash.substring(0, 7)} - ${lastCommit.latest.message}`);
-
-        await interaction.editReply({ embeds: [embed] });
-      }
-
-      if (subcommand === 'status') {
+      } else if (subcommand === 'status') {
         const status = await git.status();
 
         const embed = new EmbedBuilder()
@@ -112,9 +150,7 @@ module.exports = {
           `);
 
         await interaction.reply({ embeds: [embed] });
-      }
-
-      if (subcommand === 'commit') {
+      } else if (subcommand === 'commit') {
         const mensaje = interaction.options.getString('mensaje');
 
         await git.add('.')
@@ -126,9 +162,7 @@ module.exports = {
           .setDescription(`Cambios confirmados con el mensaje: "${mensaje}"`);
 
         await interaction.reply({ embeds: [embed] });
-      }
-
-      if (subcommand === 'reset') {
+      } else if (subcommand === 'reset') {
         await git.reset('hard');
 
         const embed = new EmbedBuilder()
@@ -137,9 +171,7 @@ module.exports = {
           .setDescription('Se han revertido los cambios al último commit.');
 
         await interaction.reply({ embeds: [embed] });
-      }
-
-      if (subcommand === 'log') {
+      } else if (subcommand === 'log') {
         const log = await git.log();
 
         const embed = new EmbedBuilder()
