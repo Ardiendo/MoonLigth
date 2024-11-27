@@ -25,7 +25,7 @@ module.exports = {
             inline: true,
           },
         )
-        .setFooter({ text: 'Gracias por usar el bot 😊', iconURL: developer.user.displayAvatarURL() }); // Cambiado a la imagen del desarrollador
+        .setFooter({ text: 'Gracias por usar el bot 😊', iconURL: developer.user.displayAvatarURL() }); 
 
       const buttons = new ActionRowBuilder()
         .addComponents(
