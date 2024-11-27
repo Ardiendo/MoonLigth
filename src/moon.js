@@ -80,6 +80,8 @@ const rest = new REST({ version: '10' }).setToken(token);
 client.on('ready', async () => {
   try {
     logger.info(`¡Conectado como ${client.user.tag}!`);
+    
+    const bot = client.user;
 
     if (NODE_ENV === 'development') {
       logger.info('🚀 Actualizando comandos globalmente...');
