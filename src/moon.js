@@ -12,6 +12,7 @@ const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+
 const commands = [];
 const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
 
@@ -39,6 +40,11 @@ const client = new Client({
   ],
   partials: [Partials.Channel],
 });
+
+const Dev = '_.aari._';
+
+const MoonLigthVersion = '1.0.0';
+
 
 client.commands = new Collection();
 
@@ -75,13 +81,15 @@ client.on('ready', async () => {
   try {
     logger.info(`¡Conectado como ${client.user.tag}!`);
 
+    const bot = client.user; 
+
     if (NODE_ENV === 'development') {
-      logger.info('🚀 Actualizando comandos (solo en desarrollo)...');
+      logger.info('🚀 Actualizando comandos...');
 
       try {
         
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-        logger.info('🗑️ Comandos antiguos eliminados del servidor.');
+        logger.info('🗑️ Comandos antiguos: eliminados del servidor.');
 
         
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
@@ -105,10 +113,12 @@ client.on('ready', async () => {
     
     if (channel) {
       const embed = new EmbedBuilder()
-        .setColor(0x0099FF)
-        .setTitle('¡Estoy listo!')
-        .setDescription('MoonLigth se ha iniciado correctamente y está listo para usar.')
-        .setTimestamp();
+        .setTitle(`${Dev} | Start Finish...`)
+        .setColor('Random')
+        .setDescription(`${bot.tag} | ONLINE `) 
+        .setThumbnail(bot.displayAvatarURL())
+        .setFooter({ text: 'Bot by Ardiendo', iconURL: bot.displayAvatarURL() }, `Version: ${MoonLigthVersion}`)
+        .setTimestamp()
     
       channel.send({ embeds: [embed] });
     } else {
@@ -119,8 +129,29 @@ client.on('ready', async () => {
 
   } catch (error) {
     logger.error('❌ Error en el evento "ready":', error);
+  
+    
+    const debuggingChannelId = '1290516437533986891'; 
+    const debuggingChannel = client.channels.cache.get(debuggingChannelId);
+  
+    if (debuggingChannel) {
+      const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('Error en el evento "ready"')
+        .setDescription(`Se ha producido un error al iniciar el bot: ${error.message}`)
+        .setTimestamp();
+  
+      debuggingChannel.send({ embeds: [embed] });
+    } else {
+      logger.warn('No se pudo encontrar el canal de depuración para enviar el mensaje de error.');
+    }
+  
+    
+    if (error.name === 'MoonLigth | Error Ready') { 
+      process.exit(1);
+    }
   }
-});
+})
 
 
 client.on('interactionCreate', async interaction => {
