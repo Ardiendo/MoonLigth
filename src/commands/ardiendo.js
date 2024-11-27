@@ -32,17 +32,16 @@ module.exports = {
         )
         .setFooter({ text: 'Gracias por usar el bot 😊', iconURL: bot.displayAvatarURL() });
 
-     
       const buttons = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
             .setLabel('GitHub')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://github.com/Ardiendo'), 
+            .setURL('https://github.com/Ardiendo'),
           new ButtonBuilder()
             .setLabel('X')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://x.com/_aaari__'), 
+            .setURL('https://x.com/_aaari__'),
         );
 
       await interaction.reply({ embeds: [embed], components: [buttons] });

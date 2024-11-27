@@ -1,18 +1,19 @@
 require('dotenv').config();
 
-const { Client, Intents, Partials, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, Intents, Partials, Collection, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const fs = require('node:fs');
 const winston = require('winston');
-const path = require('path'); 
+const path = require('path');
 
 const token = process.env.TOKEN;
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const commands = [];
-const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js')); // Utiliza path.join
+const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
 
 const client = new Client({
   intents: [
@@ -41,11 +42,17 @@ const client = new Client({
 
 client.commands = new Collection();
 
+// Cargar comandos con manejo de errores
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  client.commands.set(command.data.name, command);
-  commands.push(command.data.toJSON());
+  try {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.data.name, command);
+    commands.push(command.data.toJSON());
+  } catch (error) {
+    logger.error(`Error al cargar el comando ${file}:`, error);
+  }
 }
+
 
 const logger = winston.createLogger({
   level: 'info',
@@ -68,14 +75,20 @@ client.on('ready', async () => {
   try {
     logger.info(`¡Conectado como ${client.user.tag}!`);
 
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('🚀 Iniciando la actualización de comandos (solo en desarrollo)...');
+    if (NODE_ENV === 'development') {
+      logger.info('🚀 Actualizando comandos (solo en desarrollo)...');
 
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-      logger.info('🗑️ Comandos antiguos eliminados del servidor.');
+      try {
+        // Eliminar comandos existentes
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
+        logger.info('🗑️ Comandos antiguos eliminados del servidor.');
 
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-      logger.info('✅ Comandos actualizados en el servidor con éxito.');
+        // Registrar nuevos comandos
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+        logger.info('✅ Comandos actualizados en el servidor con éxito.');
+      } catch (error) {
+        logger.error('❌ Error al actualizar los comandos:', error);
+      }
     }
 
     client.user.setPresence({
@@ -86,10 +99,12 @@ client.on('ready', async () => {
       status: 'dnd',
     });
     logger.info('✅ Rich Presence configurada.');
+
   } catch (error) {
-    logger.error('❌ Error al actualizar los comandos o configurar Rich Presence:', error);
+    logger.error('❌ Error en el evento "ready":', error);
   }
 });
+
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -102,13 +117,19 @@ client.on('interactionCreate', async interaction => {
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
+    logger.error(`Error al ejecutar el comando ${interaction.commandName}:`, error);
 
     const embed = new EmbedBuilder()
       .setColor(0xFF0000)
       .setTitle('Error')
-      .setDescription('Hubo un error al ejecutar este comando! contacta con los developers');
+      .setDescription('Hubo un error al ejecutar este comando! Contacta con los developers.');
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    try {
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    } catch (errorReply) {
+      console.error('Error al enviar el mensaje de error:', errorReply);
+      logger.error('Error al enviar el mensaje de error:', errorReply);
+    }
   }
 });
 
