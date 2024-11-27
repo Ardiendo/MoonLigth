@@ -35,7 +35,7 @@ module.exports = {
           new ButtonBuilder()
             .setLabel('Invitar a MoonLigth')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://discord.com/oauth2/authorize?client_id=1259146338516471879&permissions=all&scope=bot&permissions=8'), 
+            .setURL('https://discord.com/oauth2/authorize?client_id=1259146338516471879&scope=bot&permissions=1099511627775'), 
         );
 
       const row = new ActionRowBuilder()

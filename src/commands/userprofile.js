@@ -3,7 +3,7 @@ require('dotenv').config();
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('usuario')
+    .setName('userprofile')
     .setDescription('Muestra información sobre el usuario.'),
 
   async execute(interaction) {
