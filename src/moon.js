@@ -51,7 +51,7 @@ for (const file of commandFiles) {
     commands.push(command.data.toJSON());
   } catch (error) {
     console.error(`\n❌ Error al cargar el comando ${file}: \n${error}\n`);
-    const loggingChannelId = 'ID_DE_TU_CANAL_DE_REGISTRO'; 
+    const loggingChannelId = '1356718029924335752'; 
     const loggingChannel = client.channels.cache.get(loggingChannelId);
     if (loggingChannel) {
       const errorEmbed = new EmbedBuilder()
@@ -120,7 +120,7 @@ client.on('ready', async () => {
     updatePresence();
     setInterval(updatePresence, 60 * 60 * 1000);
 
-    const channelId = '1294566335933845525';
+    const channelId = '1356718029924335752';
     const channel = client.channels.cache.get(channelId);
     if (channel) {
       const embed = new EmbedBuilder()
@@ -130,7 +130,7 @@ client.on('ready', async () => {
         .setThumbnail(bot.displayAvatarURL())
         .addFields(
           { name: 'Versión', value: MoonLigthVersion, inline: true },
-          { name: 'Servidor', value: client.guilds.cache.first().name, inline: true }, // Obtener el nombre del primer servidor
+          { name: 'Servidor', value: client.guilds.cache.first().name, inline: true }, 
         )
         .setTimestamp()
         .setFooter({ text: `Desarrollado por ${Dev}`, iconURL: bot.displayAvatarURL() });
@@ -143,7 +143,7 @@ client.on('ready', async () => {
     logger.info('✅ Rich Presence configurada.');
   } catch (error) {
     logger.error('❌ Ya la hemos liao:', error);
-    const debuggingChannelId = '1290516437533986891';
+    const debuggingChannelId = '1356718029924335752';
     const debuggingChannel = client.channels.cache.get(debuggingChannelId);
     if (debuggingChannel) {
       const embed = new EmbedBuilder()
