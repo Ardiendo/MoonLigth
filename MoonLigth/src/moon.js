@@ -84,18 +84,22 @@ const rest = new REST({ version: '10' }).setToken(token);
 
 client.on('ready', async () => {
   try {
+    if (!token || !clientId || !guildId) {
+      throw new Error('Faltan variables de entorno necesarias (TOKEN, CLIENT_ID, GUILD_ID)');
+    }
+
     logger.info(`¡Conectado como ${client.user.tag}!`);
     const bot = client.user;
 
     if (NODE_ENV === 'development') {
       logger.info('🚀 Actualizando comandos globalmente...');
       try {
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-        logger.info('🗑️ Comandos antiguos: eliminados del servidor.');
-        await rest.put(Routes.applicationCommands(clientId), { body: commands });
-        logger.info('✅ Comandos actualizados globalmente con éxito.');
+        // Primero registramos los comandos en el servidor específico
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+        logger.info('✅ Comandos actualizados en el servidor con éxito.');
       } catch (error) {
-        logger.error('❌ Error al actualizar los comandos globalmente:', error);
+        logger.error('❌ Error al actualizar los comandos:', error.message);
+        throw error;
       }
     }
 
