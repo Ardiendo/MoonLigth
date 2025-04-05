@@ -54,7 +54,7 @@ module.exports = {
             inline: false
           }
         )
-        .setImage('https://i.imgur.com/XqQLvXG.png')
+        .setImage('https://cdn.discordapp.com/attachments/1220480757227847837/1357879871753158796/copy_3316ABF3-DE47-47C7-A4D6-A28D9067ED81.gif?ex=67f1cfad&is=67f07e2d&hm=adaefcdf50fd263c46d206f42d3bc110b987037c8c172ea76a324f5d42a21f61&')
         .setFooter({ 
           text: '¡Gracias por usar MoonLigth! 💜', 
           iconURL: developer.displayAvatarURL()
