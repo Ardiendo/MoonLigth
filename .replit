@@ -1,0 +1,8 @@
+modules = ["nodejs-20", "nodejs-23", "java-graalvm22.3", "dotnet-8.0", "angular-node-20"]
+run = "cd MoonLigth/src && node moon.js"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "Node moon.js"]
