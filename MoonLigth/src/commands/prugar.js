@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, ComponentType, PermissionFlagsBits } = require('discord.js');
+
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('purgar')
     .setDescription('Purga mensajes de un canal.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) 
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addNumberOption(option =>
       option.setName('cantidad')
         .setDescription('La cantidad de mensajes a purgar (máximo 100).')
@@ -38,7 +39,7 @@ module.exports = {
 
       const selectMenu = new ActionRowBuilder()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId('select-purgar')
             .setPlaceholder('Selecciona una opción')
             .addOptions(options),
@@ -51,7 +52,7 @@ module.exports = {
 
       const reply = await interaction.reply({ embeds: [embed], components: [selectMenu], fetchReply: true });
 
-      const collector = reply.createMessageComponentCollector({ componentType: ComponentType.SelectMenu, time: 60000 });
+      const collector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelectMenu, time: 60000 });
 
       collector.on('collect', async i => {
         if (i.user.id === interaction.user.id) {
@@ -61,17 +62,24 @@ module.exports = {
 
           if (opcion === 'todos') {
             await interaction.channel.bulkDelete(cantidad);
-            await i.editReply({ content: `Se han purgado ${cantidad} mensajes.`, embeds: [], components: [] });
           } else if (opcion === 'bot') {
             const mensajes = await interaction.channel.messages.fetch({ limit: cantidad });
             const mensajesBot = mensajes.filter(msg => msg.author.bot);
             await interaction.channel.bulkDelete(mensajesBot);
-            await i.editReply({ content: `Se han purgado ${mensajesBot.size} mensajes del bot.`, embeds: [], components: [] });
           } else if (opcion === 'usuario') {
             const mensajes = await interaction.channel.messages.fetch({ limit: cantidad });
             const mensajesUsuario = mensajes.filter(msg => msg.author.id === interaction.user.id);
             await interaction.channel.bulkDelete(mensajesUsuario);
-            await i.editReply({ content: `Se han purgado ${mensajesUsuario.size} mensajes`, embeds: [], components: [] });
+          }
+
+          try {
+            await i.editReply({ content: `Se han purgado los mensajes según lo solicitado.`, embeds: [], components: [] });
+          } catch (error) {
+            if (error.code === 10008) {
+              console.error('Attempted to edit a message that does not exist.');
+            } else {
+              console.error('An unexpected error occurred:', error);
+            }
           }
         } else {
           await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
