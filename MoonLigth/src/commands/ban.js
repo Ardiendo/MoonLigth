@@ -1,5 +1,5 @@
 
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, SelectMenuBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -51,7 +51,7 @@ module.exports = {
 
       const selectMenu = new ActionRowBuilder()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId('ban-menu')
             .setPlaceholder('Selecciona el tipo de ban')
             .addOptions(options)
@@ -66,7 +66,7 @@ module.exports = {
       const response = await interaction.reply({
         embeds: [initialEmbed],
         components: [selectMenu],
-        fetchReply: true
+        withResponse: true
       });
 
       const collector = response.createMessageComponentCollector({
