@@ -1,48 +1,99 @@
+
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ardiendo')
-    .setDescription('Muestra información sobre la desarrolladora.'),
+    .setDescription('Muestra información detallada sobre la desarrolladora.'),
 
   async execute(interaction) {
     const developerId = process.env.DEVELOPER_ID;
     const DEVELOPER_TAG = process.env.DEVELOPER_TAG;
 
     try {
-      const developer = await interaction.guild.members.fetch(developerId);
+      const developer = await interaction.client.users.fetch(developerId);
+      const member = interaction.guild?.members.cache.get(developerId);
 
       const embed = new EmbedBuilder()
-        .setTitle(`Info de ${DEVELOPER_TAG}`)
-        .setColor("Random")
-        .setThumbnail(developer.user.displayAvatarURL())
-        .setDescription('¡Hola! Soy la desarrolladora de este bot. Aquí tienes algo de información sobre mí:')
+        .setTitle(`🔥 Perfil de ${DEVELOPER_TAG}`)
+        .setColor("#FF6B6B")
+        .setThumbnail(developer.displayAvatarURL({ dynamic: true, size: 512 }))
+        .setDescription('¡Hola! Soy la desarrolladora principal de MoonLigth. Me especializo en desarrollo de bots y aplicaciones web.')
         .addFields(
           {
-            name: 'Desarrolladora',
-            value: `**Nombre:** ${developer.user.tag}\n**ID:** ${developer.user.id}\n**Rol principal:** ${developer.roles.highest.name}\n**Se unió al servidor:** <t:${Math.floor(developer.joinedTimestamp / 1000)}:R>\n**Cuenta creada:** <t:${Math.floor(developer.user.createdTimestamp / 1000)}:R>`,
-            inline: true,
+            name: '👩‍💻 Información Personal',
+            value: [
+              `**Tag:** ${developer.tag}`,
+              `**ID:** ${developer.id}`,
+              member ? `**Rol Principal:** ${member.roles.highest.name}` : '**Rol:** No disponible en este servidor',
+              member ? `**Se unió:** <t:${Math.floor(member.joinedTimestamp / 1000)}:R>` : '',
+              `**Cuenta creada:** <t:${Math.floor(developer.createdTimestamp / 1000)}:R>`
+            ].filter(Boolean).join('\n'),
+            inline: false
           },
+          {
+            name: '🛠️ Tecnologías',
+            value: '```\nJavaScript • Python • Node.js • Discord.js\nHTML/CSS • React • MongoDB • Git\n```',
+            inline: false
+          },
+          {
+            name: '📊 Estadísticas del Bot',
+            value: [
+              `**Servidores:** ${interaction.client.guilds.cache.size}`,
+              `**Usuarios:** ${interaction.client.users.cache.size}`,
+              `**Comandos:** ${interaction.client.commands.size}`,
+              `**Versión:** ${require('../package.json').version || '1.0.0'}`
+            ].join('\n'),
+            inline: false
+          }
         )
-        .setFooter({ text: 'Gracias por usar el bot 😊', iconURL: developer.user.displayAvatarURL() }); 
+        .setImage('https://i.imgur.com/XqQLvXG.png')
+        .setFooter({ 
+          text: '¡Gracias por usar MoonLigth! 💜', 
+          iconURL: developer.displayAvatarURL()
+        })
+        .setTimestamp();
 
       const buttons = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
             .setLabel('GitHub')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://github.com/Ardiendo'),
+            .setURL('https://github.com/Ardiendo')
+            .setEmoji('📚'),
           new ButtonBuilder()
             .setLabel('X')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://x.com/_aaari__'),
+            .setURL('https://x.com/_aaari__')
+            .setEmoji('🐦'),
+          new ButtonBuilder()
+            .setLabel('Soporte')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://discord.gg/moonligth')
+            .setEmoji('💬')
         );
 
-      await interaction.reply({ embeds: [embed], components: [buttons] });
+      await interaction.reply({ 
+        embeds: [embed], 
+        components: [buttons] 
+      });
     } catch (error) {
-      console.error('Error al obtener la información:', error);
-      await interaction.reply({ content: 'No se pudo obtener la información.', ephemeral: true });
+      console.error('Error en el comando ardiendo:', error);
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al mostrar la información de la desarrolladora.')
+        .addFields({
+          name: 'Detalles',
+          value: 'Por favor, inténtalo de nuevo más tarde o contacta con el soporte.'
+        })
+        .setTimestamp();
+
+      await interaction.reply({ 
+        embeds: [errorEmbed], 
+        ephemeral: true 
+      });
     }
   },
 };
