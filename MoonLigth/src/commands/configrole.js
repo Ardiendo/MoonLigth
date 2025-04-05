@@ -74,7 +74,8 @@ module.exports = {
               label: role.name,
               value: role.id,
               emoji: '🏷️'
-            }));
+            }))
+            .slice(0, 25); // Limit to 25 roles
 
           switch (i.values[0]) {
             case 'create':
