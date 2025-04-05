@@ -4,11 +4,18 @@ const simpleGit = require('simple-git');
 const { exec } = require('child_process');
 require('dotenv').config();
 
+// Extraer la URL del repositorio desde las variables de entorno
+const REPOSITORY_URL = process.env.REPOSITORY_LINK || 'No configurado';
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('repo')
     .setDescription('Comandos para gestionar el repositorio de GitHub.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('info')
+        .setDescription('Muestra información del repositorio.'))
     .addSubcommand(subcommand =>
       subcommand
         .setName('update')
@@ -88,6 +95,9 @@ module.exports = {
       }
 
       switch (subcommand) {
+        case 'info':
+          await handleInfo(interaction, git);
+          break;
         case 'update':
           await handleUpdate(interaction, git);
           break;
@@ -320,6 +330,8 @@ async function handleStatus(interaction, git) {
       .setColor(status.isClean() ? 'Green' : 'Yellow')
       .setTitle(`📊 Estado del Repositorio | ${branch.current}`)
       .setDescription(status.isClean() ? '✅ El repositorio está limpio, no hay cambios pendientes.' : '⚠️ Hay cambios pendientes en el repositorio.')
+      .addFields(
+        { name: '🔗 Enlace del Repositorio', value: REPOSITORY_URL !== 'No configurado' ? `[Ver en GitHub](${REPOSITORY_URL})` : 'No configurado', inline: false }
       .addFields(
         { name: 'Rama Actual', value: branch.current, inline: true },
         { name: 'Estado con Remoto', value: branchStatus || 'No disponible', inline: true },
@@ -640,6 +652,111 @@ async function handleReset(interaction, git) {
   }
 }
 
+async function handleInfo(interaction, git) {
+  try {
+    await interaction.deferReply();
+    
+    // Obtener información básica del repositorio
+    const remotes = await git.getRemotes(true);
+    const branch = await git.branch();
+    const lastCommit = await git.log({ maxCount: 1 });
+    
+    // Contar commits totales
+    const commitCount = await git.raw(['rev-list', '--count', 'HEAD']);
+    
+    // Contar contribuidores
+    const contributors = await git.raw(['shortlog', '-s', '-n', 'HEAD']);
+    const contributorCount = contributors.split('\n').filter(line => line.trim() !== '').length;
+    
+    const embed = new EmbedBuilder()
+      .setColor('Blue')
+      .setTitle('📁 Información del Repositorio')
+      .addFields(
+        { name: '🔗 Repositorio', value: REPOSITORY_URL !== 'No configurado' ? `[Ver en GitHub](${REPOSITORY_URL})` : 'No configurado', inline: false },
+        { name: '🌿 Rama Actual', value: branch.current, inline: true },
+        { name: '📊 Commits Totales', value: commitCount.trim(), inline: true },
+        { name: '👥 Contribuidores', value: contributorCount.toString(), inline: true }
+      )
+      .setTimestamp();
+    
+    // Añadir información del último commit si existe
+    if (lastCommit && lastCommit.latest) {
+      embed.addFields(
+        { name: '📝 Último Commit', value: `\`${lastCommit.latest.hash.substring(0, 7)}\` - ${lastCommit.latest.message}`, inline: false },
+        { name: '👤 Autor', value: lastCommit.latest.author_name, inline: true },
+        { name: '🕒 Fecha', value: `<t:${Math.round(lastCommit.latest.date.getTime() / 1000)}:R>`, inline: true }
+      );
+    }
+    
+    // Añadir información del remoto si existe
+    if (remotes && remotes.length > 0) {
+      const originRemote = remotes.find(remote => remote.name === 'origin');
+      if (originRemote) {
+        embed.addFields(
+          { name: '🔄 Remoto Origin', value: `\`${originRemote.refs.fetch}\``, inline: false }
+        );
+      }
+    }
+    
+    // Crear botones para acciones rápidas
+    const actionButtons = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('check-status')
+          .setLabel('Estado Actual')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('📊'),
+        new ButtonBuilder()
+          .setCustomId('view-log')
+          .setLabel('Ver Commits')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('📜')
+      );
+    
+    if (REPOSITORY_URL !== 'No configurado') {
+      actionButtons.addComponents(
+        new ButtonBuilder()
+          .setURL(REPOSITORY_URL)
+          .setLabel('Abrir en GitHub')
+          .setStyle(ButtonStyle.Link)
+          .setEmoji('🔗')
+      );
+    }
+    
+    const response = await interaction.editReply({ embeds: [embed], components: [actionButtons] });
+    
+    const collector = response.createMessageComponentCollector({ time: 60000 });
+    
+    collector.on('collect', async i => {
+      if (i.user.id === interaction.user.id) {
+        if (i.customId === 'check-status') {
+          await i.deferUpdate();
+          await handleStatus(i, git);
+        } else if (i.customId === 'view-log') {
+          await i.deferUpdate();
+          await handleLog(i, git);
+        }
+      } else {
+        await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
+      }
+    });
+    
+    collector.on('end', collected => {
+      if (collected.size === 0) {
+        interaction.editReply({ embeds: [embed], components: [] }).catch(() => {});
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener información del repositorio:', error);
+    const errorEmbed = new EmbedBuilder()
+      .setColor('Red')
+      .setTitle('❌ Error')
+      .setDescription(`Hubo un error al obtener la información del repositorio: ${error.message}`)
+      .setTimestamp();
+    await interaction.editReply({ embeds: [errorEmbed] });
+  }
+}
+
 async function handleLog(interaction, git) {
   try {
     await interaction.deferReply();
@@ -661,7 +778,22 @@ async function handleLog(interaction, git) {
     
     // Organizamos los commits por fecha
     const formatCommit = commit => {
-      return `**[\`${commit.hash.substring(0, 7)}\`](https://github.com/${commit.author_name}/MoonLigth/commit/${commit.hash})** - ${commit.message}\n👤 ${commit.author_name} • 🕒 <t:${Math.floor(commit.date.getTime() / 1000)}:R>`;
+      // Si hay URL del repositorio, la usamos para generar enlaces a commits
+      let commitUrl = '';
+      if (REPOSITORY_URL !== 'No configurado') {
+        // Extraer el formato user/repo desde la URL
+        const repoMatch = REPOSITORY_URL.match(/github\.com\/([^\/]+\/[^\/]+)/);
+        if (repoMatch) {
+          commitUrl = `https://github.com/${repoMatch[1]}/commit/${commit.hash}`;
+        } else {
+          commitUrl = `${REPOSITORY_URL}/commit/${commit.hash}`;
+        }
+      } else {
+        // Fallback a formato genérico si no hay URL configurada
+        commitUrl = `https://github.com/${commit.author_name}/MoonLigth/commit/${commit.hash}`;
+      }
+      
+      return `**[\`${commit.hash.substring(0, 7)}\`](${commitUrl})** - ${commit.message}\n👤 ${commit.author_name} • 🕒 <t:${Math.floor(commit.date.getTime() / 1000)}:R>`;
     };
     
     const embed = new EmbedBuilder()
