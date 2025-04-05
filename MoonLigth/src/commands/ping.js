@@ -1,3 +1,4 @@
+
 const { SlashCommandBuilder, EmbedBuilder, version } = require('discord.js');
 const os = require('node:os');
 
@@ -6,7 +7,7 @@ module.exports = {
     .setName('ping')
     .setDescription('Responde con información detallada sobre la latencia y el estado del bot.'),
   async execute(interaction) {
-    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true });
+    const sent = await interaction.reply({ content: 'Pinging...', withResponse: true });
     const embed = new EmbedBuilder()
       .setColor("Random") 
       .setTitle('🏓 Pong!') 
@@ -17,7 +18,7 @@ module.exports = {
         { name: 'Versión de Discord.js', value: `v${version}`, inline: true },
         { name: 'Sistema operativo', value: `${os.platform()} ${os.release()}`, inline: true },
         { name: 'Uso de memoria', value: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`, inline: true },
-        { name: 'Uptime', value: `<t:${Math.floor(interaction.client.uptime / 1000)}:R>`, inline: true }, // Usar uptime del cliente
+        { name: 'Uptime', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
       )
       .setTimestamp();
     await interaction.editReply({ content: '', embeds: [embed] });
