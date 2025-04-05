@@ -44,13 +44,23 @@ const Dev = '_.aari._';
 const MoonLigthVersion = '1.1';
 client.commands = new Collection();
 
+const loadedCommands = new Set();
+
 for (const file of commandFiles) {
   try {
     const command = require(`./commands/${file}`);
+    
+    if (loadedCommands.has(command.data.name)) {
+      logger.warn(`⚠️ Comando duplicado encontrado: ${command.data.name} en ${file}`);
+      continue;
+    }
+    
+    loadedCommands.add(command.data.name);
     client.commands.set(command.data.name, command);
     commands.push(command.data.toJSON());
+    logger.info(`✅ Comando cargado: ${command.data.name}`);
   } catch (error) {
-    console.error(`\n❌ Error al cargar el comando ${file}: \n${error}\n`);
+    logger.error(`❌ Error al cargar el comando ${file}: ${error}`);
     const loggingChannelId = '1356718029924335752'; 
     const loggingChannel = client.channels.cache.get(loggingChannelId);
     if (loggingChannel) {
