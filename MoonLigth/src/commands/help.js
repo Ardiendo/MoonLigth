@@ -12,11 +12,10 @@ module.exports = {
 
       const categories = {
         "🛡️ Moderación": ["ban", "kick", "mute", "timeout", "warn", "purgar"],
-        "🛠️ Utilidad": ["avatar", "userprofile", "infosv", "ping", "configembed", "configrole"],
-        "🎮 Diversión": ["minijuegos", "ardiendo"],
+        "🛠️ Utilidad": ["avatar", "userprofile", "infosv", "ping"],
+        "🎮 Diversión": ["minijuegos"],
         "🎫 Tickets": ["tickets"],
-        "📋 Información": ["help", "moonligth", "repo"],
-        "⚙️ Desarrollo": ["dev"]
+        "📋 Información": ["help", "moonligth", "repo"]
       };
 
       const mainEmbed = new EmbedBuilder()
