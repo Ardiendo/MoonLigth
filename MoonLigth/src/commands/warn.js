@@ -1,3 +1,4 @@
+
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, ComponentType, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
@@ -18,6 +19,16 @@ module.exports = {
     try {
       const usuario = interaction.options.getUser('usuario');
       const razon = interaction.options.getString('razon');
+
+      const confirmEmbed = new EmbedBuilder()
+        .setColor('Yellow')
+        .setTitle('⚠️ Advertir a un usuario')
+        .setDescription(`Vas a advertir a ${usuario}`)
+        .addFields(
+          { name: 'Usuario', value: usuario.tag, inline: true },
+          { name: 'Razón', value: razon, inline: true }
+        )
+        .setTimestamp();
 
       const options = [
         {
@@ -40,12 +51,7 @@ module.exports = {
             .addOptions(options),
         );
 
-      const embed = new EmbedBuilder()
-        .setColor('Yellow')
-        .setTitle('⚠️ Advertir a un usuario')
-        .setDescription(`Vas a advertir a ${usuario}. ¿Quieres enviar la advertencia al usuario?`);
-
-      const reply = await interaction.reply({ embeds: [embed], components: [selectMenu], fetchReply: true });
+      const reply = await interaction.reply({ embeds: [confirmEmbed], components: [selectMenu], fetchReply: true });
 
       const collector = reply.createMessageComponentCollector({ componentType: ComponentType.SelectMenu, time: 60000 });
 
@@ -56,18 +62,56 @@ module.exports = {
           const opcion = i.values[0];
 
           if (opcion === 'si') {
+            const warnEmbed = new EmbedBuilder()
+              .setColor('Red')
+              .setTitle('⚠️ Advertencia')
+              .setDescription(`Has sido advertido en ${interaction.guild.name}`)
+              .addFields(
+                { name: 'Razón', value: razon, inline: true },
+                { name: 'Moderador', value: interaction.user.tag, inline: true }
+              )
+              .setTimestamp();
+
             try {
-              await usuario.send(`Has sido advertido en ${interaction.guild.name} por la siguiente razón: ${razon}`);
-              await i.editReply({ content: `Se ha advertido a ${usuario}.`, embeds: [], components: [] });
+              await usuario.send({ embeds: [warnEmbed] });
+              
+              const successEmbed = new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('✅ Advertencia Enviada')
+                .setDescription(`Se ha advertido a ${usuario.tag}`)
+                .setTimestamp();
+              
+              await i.editReply({ embeds: [successEmbed], components: [] });
             } catch (error) {
-              console.error(`No se pudo enviar la advertencia a ${usuario}:`, error);
-              await i.editReply({ content: `Se ha advertido a ${usuario}, pero no se pudo enviar la advertencia por mensaje privado.`, embeds: [], components: [] });
+              const warningEmbed = new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('⚠️ Advertencia Pública')
+                .setDescription(`No se pudo enviar un mensaje privado a ${usuario.tag}`)
+                .addFields(
+                  { name: 'Usuario Advertido', value: usuario.tag, inline: true },
+                  { name: 'Razón', value: razon, inline: true },
+                  { name: 'Moderador', value: interaction.user.tag, inline: true }
+                )
+                .setTimestamp();
+
+              await i.editReply({ embeds: [warningEmbed], components: [] });
             }
           } else if (opcion === 'no') {
-            await i.editReply({ content: 'No se ha enviado la advertencia al usuario.', embeds: [], components: [] });
+            const cancelEmbed = new EmbedBuilder()
+              .setColor('Grey')
+              .setTitle('❌ Advertencia Cancelada')
+              .setDescription('No se ha enviado la advertencia al usuario.')
+              .setTimestamp();
+
+            await i.editReply({ embeds: [cancelEmbed], components: [] });
           }
         } else {
-          await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
+          const noPermEmbed = new EmbedBuilder()
+            .setColor('Red')
+            .setDescription('No puedes interactuar con este menú.')
+            .setTimestamp();
+
+          await i.reply({ embeds: [noPermEmbed], ephemeral: true });
         }
       });
 
@@ -75,7 +119,14 @@ module.exports = {
 
     } catch (error) {
       console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
-      await interaction.reply({ content: 'Hubo un error al ejecutar el comando.', ephemeral: true });
+      
+      const errorEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('❌ Error')
+        .setDescription('Hubo un error al ejecutar el comando.')
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
   },
 };
