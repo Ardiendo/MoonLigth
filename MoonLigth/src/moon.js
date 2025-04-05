@@ -1,294 +1,276 @@
-require('dotenv').config();
-
-const { Client, Intents, Partials, Collection, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
-const fs = require('node:fs');
-const winston = require('winston');
-const path = require('path');
+require('dotenv').config()
+const {
+    Client,
+    Intents,
+    Partials,
+    Collection,
+    GatewayIntentBits,
+    ActivityType,
+    EmbedBuilder
+} = require('discord.js')
+const { REST } = require('@discordjs/rest')
+const { Routes } = require('discord-api-types/v9')
+const fs = require('node:fs')
+const winston = require('winston')
+const path = require('path')
 
 const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.colorize(),
-    winston.format.printf(({ timestamp, level, message }) => {
-      return `[${timestamp}] ${level}: ${message}`;
-    })
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ],
-});
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message }) => `[${timestamp}] ${level}: ${message}`)
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'error.log', level: 'error' })
+    ]
+})
 
-const token = process.env.TOKEN;
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
-const NODE_ENV = process.env.NODE_ENV || 'development';
-
-const commands = [];
-const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
+const token = process.env.TOKEN
+const clientId = process.env.CLIENT_ID
+const guildId = process.env.GUILD_ID
+const NODE_ENV = process.env.NODE_ENV || 'development'
+const COMMAND_SCOPE = process.env.COMMAND_SCOPE || 'both'
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildBans,
-    GatewayIntentBits.GuildEmojisAndStickers,
-    GatewayIntentBits.GuildIntegrations,
-    GatewayIntentBits.GuildWebhooks,
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildMessageTyping,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.DirectMessageReactions,
-    GatewayIntentBits.DirectMessageTyping,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildScheduledEvents,
-    GatewayIntentBits.AutoModerationConfiguration,
-    GatewayIntentBits.AutoModerationExecution
-  ],
-  partials: [Partials.Channel],
-});
+    intents: Object.values(GatewayIntentBits),
+    partials: [Partials.Channel]
+})
 
-const Dev = '_.aari._';
-const MoonLigthVersion = '1.1';
-client.commands = new Collection();
-client.events = new Collection(); // Added for event storage
+const Dev = '_.aari._'
+const MoonLigthVersion = '1.1'
 
-const loadedCommands = new Set();
+client.commands = new Collection()
+client.events = new Collection()
 
-for (const file of commandFiles) {
-  try {
-    const command = require(`./commands/${file}`);
+const commands = []
+const loadedCommandNames = new Set()
+const commandsPath = path.join(__dirname, 'commands')
 
-    if (loadedCommands.has(command.data.name)) {
-      logger.warn(`⚠️ Comando duplicado encontrado: ${command.data.name} en ${file}`);
-      continue;
+if (fs.existsSync(commandsPath)) {
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'))
+
+    for (const file of commandFiles) {
+        const filePath = path.join(commandsPath, file)
+        try {
+            const command = require(filePath)
+            if (!command.data || !command.data.name || !command.execute) {
+                logger.warn(`⚠️ Archivo de comando inválido: ${file}`)
+                continue
+            }
+
+            if (loadedCommandNames.has(command.data.name)) {
+                logger.warn(`⚠️ Comando duplicado omitido: ${command.data.name} en ${file}`)
+                continue
+            }
+
+            loadedCommandNames.add(command.data.name)
+            client.commands.set(command.data.name, command)
+            commands.push(command.data.toJSON())
+            logger.info(`✅ Comando cargado: ${command.data.name}`)
+        } catch (error) {
+            logger.error(`❌ Error al cargar el comando ${file}: ${error.stack || error}`)
+        }
     }
-
-    loadedCommands.add(command.data.name);
-    client.commands.set(command.data.name, command);
-    commands.push(command.data.toJSON());
-    logger.info(`✅ Comando cargado: ${command.data.name}`);
-  } catch (error) {
-    logger.error(`❌ Error al cargar el comando ${file}: ${error}`);
-    const loggingChannelId = '1356718029924335752'; 
-    const loggingChannel = client.channels.cache.get(loggingChannelId);
-    if (loggingChannel) {
-      const errorEmbed = new EmbedBuilder()
-        .setColor('Red')
-        .setTitle('❌ Error al cargar comando')
-        .setDescription(`Hubo un error al cargar el comando \`${file}\`.`)
-        .addFields({ name: 'Error', value: error.message, inline: false })
-        .setTimestamp();
-      loggingChannel.send({ embeds: [errorEmbed] });
-    }
-  }
+} else {
+    logger.warn(`⚠️ La carpeta de comandos no existe en: ${commandsPath}`)
 }
 
-const rest = new REST({ version: '10' }).setToken(token);
+const rest = new REST({ version: '10' }).setToken(token)
 
 client.on('ready', async () => {
-  try {
-    if (!token || !clientId || !guildId) {
-      throw new Error('Faltan variables de entorno necesarias (TOKEN, CLIENT_ID, GUILD_ID)');
-    }
-
-    logger.info(`¡Conectado como ${client.user.tag}!`);
-    const bot = client.user;
-
-
-    const logsChannel = client.channels.cache.get('1220480757697478697', '1356718029924335752');
-    if (logsChannel) {
-      const commandsList = Array.from(client.commands.keys()).join(', ');
-      const loginEmbed = new EmbedBuilder()
-        .setColor("Green")
-        .setTitle('🟢 \ MoonLigth | ONLINE \ 🟢')
-        .setDescription(`${bot.tag} | Se inicio correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
-        .addFields(
-          { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
-          { name: '👥 Usuarios', value: `${client.users.cache.size}`, inline: true },
-          { name: '🕒 Tiempo de inicio', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-          { name: '🛠️ Total Comandos', value: `${client.commands.size}`, inline: true }
-        )
-        .setThumbnail(bot.displayAvatarURL())
-        .setFooter({ text: `ID del Bot: ${bot.id}` })
-        .setTimestamp();
-
-      await logsChannel.send({ embeds: [loginEmbed] });
-      logger.info('✅ Logs de inicio enviados correctamente');
-    } else {
-      logger.warn('⚠️ No se pudo encontrar el canal de logs');
-    }
-
     try {
-      logger.info('🚀 Actualizando comandos globalmente...');
+        if (!token || !clientId) {
+            throw new Error('❌ Faltan variables de entorno esenciales (TOKEN, CLIENT_ID)')
+        }
 
-      await rest.put(Routes.applicationCommands(clientId), { body: commands });
-      logger.info('✅ Comandos actualizados globalmente con éxito.');
+        logger.info(`🎉 ¡Conectado como ${client.user.tag}!`)
+        const bot = client.user
 
-      if (NODE_ENV === 'development' && guildId) {
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-        logger.info('✅ Comandos actualizados en el servidor de desarrollo con éxito.');
-      }
-    } catch (error) {
-      logger.error('❌ Error al actualizar los comandos:', error.message);
-      throw error;
-    }
+        const logsChannelId = '1220480757697478697'
+        const logsChannel = client.channels.cache.get(logsChannelId)
+        if (logsChannel) {
+            const commandsList = Array.from(client.commands.keys()).join(', ') || 'Ninguno'
+            const loginEmbed = new EmbedBuilder()
+                .setColor("Random")
+                .setTitle('🟢 \\ MoonLigth | ONLINE \\ 🟢')
+                .setDescription(`${bot.tag} | Se inició correctamente\n\n**Comandos Cargados Localmente:**\n\`\`\`${commandsList}\`\`\``)
+                .addFields(
+                    { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
+                    { name: '👥 Usuarios', value: `${client.guilds.cache.size > 1 ? 'No disponible (Shard?)' : client.guilds.cache.first()?.memberCount ?? 'N/A'}`, inline: true },
+                    { name: '🕒 Tiempo de inicio', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+                    { name: '🛠️ Total Comandos Cargados', value: `${client.commands.size}`, inline: true }
+                )
+                .setThumbnail(bot.displayAvatarURL())
+                .setFooter({ text: `ID del Bot: ${bot.id}` })
+                .setTimestamp()
 
-    const activities = [
-      { name: 'By: Ardiendo', type: ActivityType.Playing },
-      { name: 'discord.gg/vZyQ3u5re2', type: ActivityType.Competing },
-      { name: 'Ticket system | Coming soon...', type: ActivityType.Watching },
-      { name: '/help para ver mis comandos', type: ActivityType.Listening },
-    ];
+            await logsChannel.send({ embeds: [loginEmbed] })
+            logger.info('✅ Logs de inicio enviados correctamente')
+        } else {
+            logger.warn(`⚠️ No se pudo encontrar el canal de logs con ID: ${logsChannelId}`)
+        }
 
-    let currentActivity = 0;
+        const scope = COMMAND_SCOPE.toLowerCase()
+        if (!['global', 'guild', 'both'].includes(scope)) {
+            throw new Error(`❌ COMMAND_SCOPE inválido: "${COMMAND_SCOPE}". Usa: global, guild o both.`)
+        }
 
-    function updatePresence() {
-      const activity = activities[currentActivity];
-      if (activity.name === 'By: Ardiendo') {
-        activity.name = `By: Ardiendo | ${client.guilds.cache.size} servidores`;
-      }
-      client.user.setPresence({ activities: [activity], status: 'dnd' });
-      currentActivity = (currentActivity + 1) % activities.length;
-    }
+        logger.info('🧹 Iniciando proceso de limpieza y registro de comandos...')
 
-    updatePresence();
-    setInterval(updatePresence, 60 * 60 * 1000);
+        try {
+            logger.info('🔄 Obteniendo comandos globales existentes...')
+            const existingGlobalCommands = await rest.get(
+                Routes.applicationCommands(clientId)
+            )
 
-    const channelId = '1356718029924335752';
-    const channel = client.channels.cache.get(channelId);
-    if (channel) {
-      const embed = new EmbedBuilder()
-        .setColor("Random")
-        .setTitle('✅', `${Dev} | Inicio completado`)
-        .setDescription(`${bot.tag} está **ONLINE**!`)
-        .setThumbnail(bot.displayAvatarURL())
-        .addFields(
-          { name: 'Versión', value: MoonLigthVersion, inline: true },
-          { name: 'Servidor', value: client.guilds.cache.first().name, inline: true }, 
-        )
-        .setTimestamp()
-        .setFooter({ text: `Desarrollado por ${Dev}`, iconURL: bot.displayAvatarURL() });
-
-      channel.send({ embeds: [embed] });
-    } else {
-      logger.warn('No se pudo encontrar el canal para enviar el mensaje de inicio.');
-    }
-
-    logger.info('✅ Rich Presence configurada.');
-  } catch (error) {
-      logger.error('❌ Error crítico:', error);
-      const debuggingChannelId = '1356718029924335752';
-      const debuggingChannel = client.channels.cache.get(debuggingChannelId);
-      if (debuggingChannel) {
-        const errorEmbed = new EmbedBuilder()
-          .setColor('Red')
-          .setTitle('⚠️ Error Crítico Detectado')
-          .setDescription('Se ha producido un error durante el inicio del bot')
-          .addFields(
-            { 
-              name: '🔍 Detalles del Error',
-              value: `\`\`\`js\n${error.stack || error.message}\`\`\``,
-              inline: false 
-            },
-            { 
-              name: '⏰ Timestamp',
-              value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
-              inline: true 
-            },
-            {
-              name: '🔧 Tipo de Error',
-              value: error.name || 'Error Desconocido',
-              inline: true
-            },
-            {
-              name: '💻 Estado del Sistema',
-              value: `RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB\nUptime: ${Math.floor(process.uptime())}s`,
-              inline: true
+            const commandsToDelete = []
+            for (const cmd of existingGlobalCommands) {
+                if (!loadedCommandNames.has(cmd.name)) {
+                    commandsToDelete.push(cmd)
+                }
             }
-          )
-          .setTimestamp()
-          .setFooter({ text: 'MoonLigth Error Handler', iconURL: client.user?.displayAvatarURL() });
 
-        await debuggingChannel.send({ embeds: [errorEmbed] });
-      } else {
-        logger.error('No se pudo encontrar el canal de depuración para enviar el mensaje de error.');
-      }
+            if (commandsToDelete.length > 0) {
+                logger.warn(`⚠️ Se eliminarán ${commandsToDelete.length} comandos globales obsoletos: ${commandsToDelete.map(c => c.name).join(', ')}`)
+                await Promise.all(commandsToDelete.map(cmd =>
+                    rest.delete(Routes.applicationCommand(clientId, cmd.id))
+                        .then(() => logger.info(`✅ Comando global eliminado: ${cmd.name} (${cmd.id})`))
+                        .catch(err => logger.error(`❌ Error eliminando comando global ${cmd.name} (${cmd.id}): ${err.stack || err}`))
+                ))
+                logger.info('✅ Limpieza de comandos globales completada.')
+            } else {
+                logger.info('🟢 No se encontraron comandos globales obsoletos.')
+            }
 
-      if (error.name === 'MoonLigth | Error Ready') {
-        logger.error('Error crítico detectado. Iniciando apagado de emergencia...');
-        process.exit(1);
-      }
+            if (scope === 'global' || scope === 'both') {
+                logger.info(`🌍 Registrando ${commands.length} comandos globales...`)
+                await rest.put(Routes.applicationCommands(clientId), { body: commands })
+                logger.info('✅ Comandos registrados globalmente.')
+            }
+        } catch (error) {
+            logger.error(`❌ Error durante el proceso de comandos globales: ${error.stack || error}`)
+        }
+
+        if ((scope === 'guild' || scope === 'both') && guildId) {
+            try {
+                logger.info(`🏗️ Registrando ${commands.length} comandos en el servidor de desarrollo (ID: ${guildId})...`)
+                await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
+                logger.info('✅ Comandos registrados en el servidor de desarrollo.')
+            } catch (error) {
+                logger.error(`❌ Error registrando comandos en el servidor ${guildId}: ${error.stack || error}`)
+            }
+        } else if ((scope === 'guild' || scope === 'both') && !guildId) {
+            logger.warn("⚠️ COMMAND_SCOPE incluye 'guild' pero no se proporcionó GUILD_ID. Omitiendo registro de servidor.")
+        }
+
+        const activities = [
+            { name: 'By: Ardiendo | discord.gg/vZyQ3u5re2', type: ActivityType.Playing },
+            { name: 'MoonLigth v1.1 en acción', type: ActivityType.Competing },
+            { name: 'Comandos mágicos disponibles', type: ActivityType.Listening },
+            { name: 'Protegiendo servidores...', type: ActivityType.Watching },
+            { name: '/help para ver mis comandos', type: ActivityType.Listening }
+        ]
+        let currentActivity = 0
+        const updatePresence = () => {
+            client.user.setPresence({
+                activities: [activities[currentActivity]],
+                status: 'dnd'
+            })
+            currentActivity = (currentActivity + 1) % activities.length
+        }
+        updatePresence()
+        setInterval(updatePresence, 30 * 1000)
+        logger.info('✅ Rich Presence configurada')
+
+    } catch (error) {
+        logger.error(`❌ Error crítico durante el inicio: ${error.stack || error}`)
+        const errorChannelId = '1356718029924335752'
+        const channel = client.channels.cache.get(errorChannelId)
+        if (channel && channel.isTextBased()) {
+            const embed = new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('❌ Error Crítico al Iniciar')
+                .setDescription('Se produjo un error durante el arranque del bot.')
+                .addFields(
+                    { name: 'Mensaje', value: `\`\`\`${error.message}\`\`\`` },
+                    { name: 'Stack (parcial)', value: `\`\`\`${error.stack?.slice(0, 1000) || 'No disponible'}\`\`\`` }
+                )
+                .setTimestamp()
+            await channel.send({ embeds: [embed] }).catch(err => logger.error(`❌ Failed to send critical error embed: ${err}`))
+        } else {
+            logger.warn(`⚠️ No se pudo encontrar o enviar al canal de errores críticos con ID: ${errorChannelId}`)
+        }
     }
-});
+})
 
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand()) return
 
-  const command = client.commands.get(interaction.commandName);
-
-  if (!command) return;
-
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
-
-    const errorEmbed = new EmbedBuilder()
-      .setColor('Red')
-      .setTitle('❌ Error')
-      .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
-      .addFields(
-        { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
-        { name: 'Usuario', value: interaction.user.tag, inline: true },
-        { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-      )
-      .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+    const command = client.commands.get(interaction.commandName)
+    if (!command) {
+        logger.warn(`⚠️ Comando no encontrado: ${interaction.commandName}`)
+        try {
+            await interaction.reply({ content: 'Ups! Parece que ese comando ya no existe o ha cambiado.', ephemeral: true })
+        } catch (replyError) {
+            logger.error(`❌ Error respondiendo a comando no encontrado: ${replyError}`)
+        }
+        return
+    }
 
     try {
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-    } catch (replyError) {
-      // Si no se puede responder directamente, intenta una actualización o una respuesta diferida
-      try {
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply({ embeds: [errorEmbed] });
-        } else {
-          await interaction.deferReply({ ephemeral: true });
-          await interaction.editReply({ embeds: [errorEmbed] });
+        await command.execute(interaction, client)
+    } catch (error) {
+        logger.error(`❌ Error ejecutando /${interaction.commandName}: ${error.stack || error}`)
+
+        const errorEmbed = new EmbedBuilder()
+            .setColor('Red')
+            .setTitle('❌ Error al Ejecutar')
+            .setDescription('Hubo un error al ejecutar este comando.')
+            .addFields(
+                { name: 'Comando', value: `\`/${interaction.commandName}\`` },
+                { name: 'Usuario', value: `${interaction.user.tag} (\`${interaction.user.id}\`)` },
+                { name: 'Error', value: `\`\`\`${error.message}\`\`\`` }
+            )
+            .setTimestamp()
+
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ embeds: [errorEmbed], ephemeral: true })
+            } else {
+                await interaction.reply({ embeds: [errorEmbed], ephemeral: true })
+            }
+        } catch (err) {
+            logger.error(`❌ Error al responder con embed de error: ${err.stack || err}`)
         }
-      } catch (finalError) {
-        console.error(`No se pudo responder al error: ${finalError}`);
-      }
     }
-    }
-  }
-);
+})
 
-// Cargar eventos
-const eventsPath = path.join(__dirname, 'events');
+const eventsPath = path.join(__dirname, 'events')
 if (fs.existsSync(eventsPath)) {
-  const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-
-  for (const file of eventFiles) {
-    const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
-
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args));
+    const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))
+    for (const file of eventFiles) {
+        const filePath = path.join(eventsPath, file)
+        try {
+            const event = require(filePath)
+            if (!event.name || !event.execute) {
+                logger.warn(`⚠️ Archivo de evento inválido: ${file}`)
+                continue
+            }
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args, client))
+            } else {
+                client.on(event.name, (...args) => event.execute(...args, client))
+            }
+            client.events.set(event.name, event)
+            logger.info(`✅ Evento cargado: ${event.name}`)
+        } catch (error) {
+            logger.error(`❌ Error cargando evento ${file}: ${error.stack || error}`)
+        }
     }
-
-    client.events.set(event.name, event);
-    logger.info(`✅ Evento cargado: ${event.name}`);
-  }
+} else {
+    logger.info("⚠️ La carpeta de eventos no existe, omitiendo carga de eventos.")
 }
 
-client.login(token);
+client.login(token)
