@@ -1,4 +1,4 @@
-# 🌸 MoonLight | V1.1 🔥
+# 🌸 MoonLight | V1.0.0 🥳
 
 [![Discord.js Version](https://img.shields.io/badge/discord.js-v14-blue.svg?logo=discord&logoColor=white)](https://discord.js.org/#/)
 [![Node.js Version](https://img.shields.io/badge/node.js-v18+-green.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
