@@ -91,16 +91,21 @@ client.on('ready', async () => {
     logger.info(`¡Conectado como ${client.user.tag}!`);
     const bot = client.user;
 
-    if (NODE_ENV === 'development') {
+    try {
       logger.info('🚀 Actualizando comandos globalmente...');
-      try {
-        // Primero registramos los comandos en el servidor específico
+      
+      // Registrar comandos globalmente
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      logger.info('✅ Comandos actualizados globalmente con éxito.');
+      
+      // También registrar comandos en el servidor de desarrollo si está en modo desarrollo
+      if (NODE_ENV === 'development' && guildId) {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-        logger.info('✅ Comandos actualizados en el servidor con éxito.');
-      } catch (error) {
-        logger.error('❌ Error al actualizar los comandos:', error.message);
-        throw error;
+        logger.info('✅ Comandos actualizados en el servidor de desarrollo con éxito.');
       }
+    } catch (error) {
+      logger.error('❌ Error al actualizar los comandos:', error.message);
+      throw error;
     }
 
     const activities = [
