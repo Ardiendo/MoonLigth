@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 
 module.exports = {
@@ -57,7 +56,7 @@ module.exports = {
       const response = await interaction.reply({
         embeds: [mainEmbed],
         components: [menu],
-        ephemeral: true
+        flags: 64
       });
 
       const collector = response.createMessageComponentCollector({
@@ -205,7 +204,7 @@ module.exports = {
               break;
           }
         } else {
-          await i.reply({ content: '❌ No puedes usar este menú.', ephemeral: true });
+          await i.reply({ content: '❌ No puedes usar este menú.', flags: 64 });
         }
       });
 
@@ -218,7 +217,7 @@ module.exports = {
       console.error(error);
       await interaction.reply({ 
         content: 'Hubo un error al ejecutar el comando.',
-        ephemeral: true 
+        flags: 64
       });
     }
   },
