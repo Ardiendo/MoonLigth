@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 
 const { Client, Intents, Partials, Collection, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
@@ -6,6 +7,21 @@ const { Routes } = require('discord-api-types/v9');
 const fs = require('node:fs');
 const winston = require('winston');
 const path = require('path');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.colorize(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `[${timestamp}] ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+  ],
+});
 
 const token = process.env.TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -75,21 +91,6 @@ for (const file of commandFiles) {
   }
 }
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.colorize(),
-    winston.format.printf(({ timestamp, level, message }) => {
-      return `[${timestamp}] ${level}: ${message}`;
-    })
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ],
-});
-
 const rest = new REST({ version: '10' }).setToken(token);
 
 client.on('ready', async () => {
@@ -104,11 +105,9 @@ client.on('ready', async () => {
     try {
       logger.info('🚀 Actualizando comandos globalmente...');
       
-      // Registrar comandos globalmente
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       logger.info('✅ Comandos actualizados globalmente con éxito.');
       
-      // También registrar comandos en el servidor de desarrollo si está en modo desarrollo
       if (NODE_ENV === 'development' && guildId) {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
         logger.info('✅ Comandos actualizados en el servidor de desarrollo con éxito.');
