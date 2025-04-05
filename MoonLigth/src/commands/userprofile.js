@@ -1,106 +1,180 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 require('dotenv').config();
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('userprofile')
-    .setDescription('Muestra información sobre el usuario.'),
+    .setDescription('Muestra información detallada sobre el usuario.')
+    .addUserOption(option => 
+      option.setName('usuario')
+        .setDescription('Usuario del que quieres ver la información')
+        .setRequired(false)),
 
   async execute(interaction) {
     try {
-      const usuario = interaction.user;
-      const guild = interaction.guild;
+      const targetUser = interaction.options.getUser('usuario') || interaction.user;
+      const member = interaction.guild.members.cache.get(targetUser.id);
       const developerId = process.env.DEVELOPER_ID;
 
-      const embed = new EmbedBuilder()
+      const mainEmbed = new EmbedBuilder()
         .setColor("Random")
-        .setTitle(`Información de ${usuario.tag}`)
-        .setThumbnail(usuario.displayAvatarURL())
-        .setDescription(`Aquí tienes tu información en el servidor **${guild.name}**:`); 
-      
-      const botones = new ActionRowBuilder()
+        .setTitle(`Perfil de ${targetUser.tag}`)
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 512 }))
+        .setDescription(`Selecciona una opción del menú para ver información específica sobre ${targetUser.username}`);
+
+      const menu = new ActionRowBuilder()
         .addComponents(
-          new ButtonBuilder()
-            .setCustomId('avatar')
-            .setLabel('Avatar')
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId('info')
-            .setLabel('Información')
-            .setStyle(ButtonStyle.Primary),
-          
+          new StringSelectMenuBuilder()
+            .setCustomId('profile-menu')
+            .setPlaceholder('Selecciona una categoría')
+            .addOptions([
+              {
+                label: 'Información General',
+                description: 'Ver información básica del usuario',
+                value: 'general',
+                emoji: '👤'
+              },
+              {
+                label: 'Información del Servidor',
+                description: 'Ver información específica del servidor',
+                value: 'server',
+                emoji: '🏰'
+              },
+              {
+                label: 'Roles y Permisos',
+                description: 'Ver roles y permisos del usuario',
+                value: 'roles',
+                emoji: '⚔️'
+              },
+              {
+                label: 'Presencia',
+                description: 'Ver estado y actividad actual',
+                value: 'presence',
+                emoji: '🎮'
+              }
+            ])
         );
 
-      const respuesta = await interaction.reply({ embeds: [embed], components: [botones] });
+      const response = await interaction.reply({
+        embeds: [mainEmbed],
+        components: [menu],
+        fetchReply: true
+      });
 
-     
-      const collector = respuesta.createMessageComponentCollector({ time: 60000 });
+      const collector = response.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        time: 60000
+      });
 
       collector.on('collect', async i => {
         if (i.user.id === interaction.user.id) {
-          if (i.customId === 'avatar') {
-            
-            const avatarEmbed = new EmbedBuilder()
-              .setColor("Random")
-              .setTitle(`Avatar de ${usuario.tag}`)
-              .setImage(usuario.displayAvatarURL({ dynamic: true, size: 4096 }));
+          const embed = new EmbedBuilder()
+            .setColor("Random")
+            .setTimestamp()
+            .setFooter({ text: `Solicitado por ${i.user.tag}`, iconURL: i.user.displayAvatarURL() });
 
-            await i.update({ embeds: [avatarEmbed], components: [] });
-          } else if (i.customId === 'info') {
-            
-            const infoEmbed = new EmbedBuilder()
-              .setColor("Random")
-              .setTitle(`Información de ${usuario.tag}`)
-              .addFields(
-                { name: 'Nombre', value: usuario.username, inline: true },
-                { name: 'Discriminator', value: usuario.discriminator, inline: true },
-                { name: 'ID', value: usuario.id, inline: true },
-                { name: 'Cuenta creada', value: `<t:${Math.floor(usuario.createdTimestamp / 1000)}:D>`, inline: true },
-                { name: 'Bot', value: usuario.bot ? 'Sí' : 'No', inline: true },
-                { name: 'Banner', value: usuario.bannerURL() ? `[Enlace](${usuario.bannerURL({ dynamic: true })})` : 'No tiene', inline: true },
-                { name: 'Color de acento', value: usuario.accentColor ? `#${usuario.accentColor.toString(16)}` : 'No tiene', inline: true },
-                { name: 'Es un usuario verificado', value: usuario.verified ? 'Sí' : 'No', inline: true },
-                { name: 'Tiene un banner público', value: usuario.banner ? 'Sí' : 'No', inline: true },
-              );
+          switch (i.values[0]) {
+            case 'general':
+              embed
+                .setTitle(`📋 Información General de ${targetUser.tag}`)
+                .addFields(
+                  { name: '🏷️ Nombre', value: targetUser.username, inline: true },
+                  { name: '🆔 ID', value: targetUser.id, inline: true },
+                  { name: '📅 Cuenta Creada', value: `<t:${Math.floor(targetUser.createdTimestamp / 1000)}:R>`, inline: true },
+                  { name: '🤖 Bot', value: targetUser.bot ? 'Sí' : 'No', inline: true },
+                  { name: '🎨 Color de Acento', value: member.displayHexColor || 'Ninguno', inline: true },
+                  { name: '🖼️ Avatar', value: `[Link](${targetUser.displayAvatarURL({ dynamic: true, size: 1024 })})`, inline: true }
+                );
+              break;
 
-            
-            const miembro = guild.members.cache.get(usuario.id);
-            if (miembro) {
-              infoEmbed.addFields(
-                { name: 'Apodo', value: miembro.nickname || 'No tiene', inline: true },
-                { name: 'Se unió al servidor', value: `<t:${Math.floor(miembro.joinedTimestamp / 1000)}:D>`, inline: true },
-                { name: 'Rol más alto', value: miembro.roles.highest.name, inline: true },
-                
-              );
-            }
+            case 'server':
+              embed
+                .setTitle(`🏰 Información del Servidor para ${targetUser.tag}`)
+                .addFields(
+                  { name: '📝 Apodo', value: member.nickname || 'Sin apodo', inline: true },
+                  { name: '📅 Se unió al servidor', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
+                  { name: '🎭 Rol más alto', value: member.roles.highest.name, inline: true },
+                  { name: '🎨 Color del rol', value: member.displayHexColor || 'Ninguno', inline: true },
+                  { name: '🛡️ Moderado', value: member.isCommunicationDisabled() ? 'Sí' : 'No', inline: true },
+                  { name: '🎯 Boosting', value: member.premiumSince ? `Desde <t:${Math.floor(member.premiumSince / 1000)}:R>` : 'No', inline: true }
+                );
+              break;
 
-            
-            if (usuario.id === developerId) {
-              infoEmbed.addFields({ name: 'Información adicional', value: '¡Eres el desarrollador de este bot! Gracias por tu trabajo 😊' });
-            }
+            case 'roles':
+              const roles = member.roles.cache
+                .sort((a, b) => b.position - a.position)
+                .map(role => role.toString())
+                .slice(0, 15);
 
-            await i.update({ embeds: [infoEmbed], components: [] });
+              embed
+                .setTitle(`⚔️ Roles y Permisos de ${targetUser.tag}`)
+                .addFields(
+                  { name: '🛡️ Roles', value: roles.join(', ') || 'Sin roles' },
+                  { name: '📊 Total de roles', value: `${member.roles.cache.size - 1}`, inline: true },
+                  { name: '⚡ Permisos Clave', value: member.permissions.toArray().slice(0, 5).join(', ').replaceAll('_', ' ').toLowerCase() || 'Ninguno' }
+                );
+              break;
+
+            case 'presence':
+              const status = {
+                online: '🟢 En línea',
+                idle: '🟡 Ausente',
+                dnd: '🔴 No molestar',
+                offline: '⚫ Desconectado'
+              };
+
+              embed
+                .setTitle(`🎮 Presencia de ${targetUser.tag}`)
+                .addFields(
+                  { name: '📡 Estado', value: status[member.presence?.status || 'offline'], inline: true },
+                  { name: '🎯 Cliente', value: member.presence?.clientStatus ? Object.keys(member.presence.clientStatus).join(', ') : 'Desconocido', inline: true }
+                );
+
+              if (member.presence?.activities?.length > 0) {
+                member.presence.activities.forEach(activity => {
+                  embed.addFields({
+                    name: `${activity.type === 'CUSTOM_STATUS' ? '💭' : '🎮'} ${activity.type}`,
+                    value: activity.name + (activity.details ? `\n${activity.details}` : ''),
+                    inline: false
+                  });
+                });
+              }
+              break;
           }
-          
+
+          if (targetUser.id === developerId) {
+            embed.addFields({ 
+              name: '👑 Información Especial', 
+              value: '¡Este usuario es el desarrollador del bot!' 
+            });
+          }
+
+          await i.update({ embeds: [embed], components: [menu] });
         } else {
-          await i.reply({ content: 'No puedes interactuar con este menú.', ephemeral: true });
+          await i.reply({ 
+            content: '❌ No puedes interactuar con este menú.', 
+            ephemeral: true 
+          });
         }
       });
 
-      collector.on('end', collected => console.log(`Se recogieron ${collected.size} interacciones.`));
-    } catch (error) {
-      console.error(`\n❌ Error al ejecutar el comando: \n${error}\n`);
+      collector.on('end', () => {
+        menu.components[0].setDisabled(true);
+        interaction.editReply({ components: [menu] }).catch(() => {});
+      });
 
+    } catch (error) {
+      console.error('Error en el comando userprofile:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('Red')
         .setTitle('❌ Error')
-        .setDescription('Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo más tarde.')
+        .setDescription('Hubo un error al mostrar la información del usuario.')
         .addFields(
-          { name: 'Comando', value: `/${interaction.commandName}`, inline: true },
-          { name: 'Usuario', value: interaction.user.tag, inline: true },
-          { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+          { name: 'Comando', value: interaction.commandName, inline: true },
+          { name: 'Error', value: error.message, inline: true }
         )
-        .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
+        .setTimestamp();
 
       await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
