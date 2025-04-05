@@ -6,3 +6,24 @@ channel = "stable-24_05"
 
 [deployment]
 run = ["sh", "-c", "Node moon.js"]
+
+[workflows]
+runButton = "Run MoonLigth"
+
+[[workflows.workflow]]
+name = "Run MoonLigth"
+author = 41064348
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd MoonLigth/src && node moon.js"
+
+[[workflows.workflow]]
+name = "Run MoonLigth"
+author = 41064348
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd MoonLigth/src && node moon.js"
