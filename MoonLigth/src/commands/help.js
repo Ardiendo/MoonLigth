@@ -13,9 +13,9 @@ module.exports = {
       const categories = {
         "🛡️ Moderación": ["ban", "kick", "mute", "timeout", "warn", "purgar"],
         "🛠️ Utilidad": ["avatar", "userprofile", "infosv", "ping", "configembed", "configrole"],
-        "🎮 Diversión": ["minijuegos", "ardiendo"],
+        "🎮 Diversión": ["minijuegos", "ardiendo", "moonligth"],
         "🎫 Tickets": ["tickets"],
-        "📋 Información": ["help", "moonligth", "repo"],
+        "📋 Información": ["help", "repo"],
         "⚙️ Desarrollo": ["dev"]
       };
 
