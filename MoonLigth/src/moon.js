@@ -101,6 +101,28 @@ client.on('ready', async () => {
 
     logger.info(`¡Conectado como ${client.user.tag}!`);
     const bot = client.user;
+    
+    // Sistema de logs de inicio
+    const logsChannel = client.channels.cache.get('1220480757697478697');
+    if (logsChannel) {
+      const loginEmbed = new EmbedBuilder()
+        .setColor("Green")
+        .setTitle('🟢 Bot Iniciado')
+        .setDescription(`${bot.tag} se ha conectado correctamente`)
+        .addFields(
+          { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
+          { name: '👥 Usuarios', value: `${client.users.cache.size}`, inline: true },
+          { name: '🕒 Tiempo de inicio', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+        )
+        .setThumbnail(bot.displayAvatarURL())
+        .setFooter({ text: `ID del Bot: ${bot.id}` })
+        .setTimestamp();
+
+      await logsChannel.send({ embeds: [loginEmbed] });
+      logger.info('✅ Logs de inicio enviados correctamente');
+    } else {
+      logger.warn('⚠️ No se pudo encontrar el canal de logs');
+    }
 
     try {
       logger.info('🚀 Actualizando comandos globalmente...');
