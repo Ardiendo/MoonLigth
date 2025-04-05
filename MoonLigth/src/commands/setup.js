@@ -69,7 +69,7 @@ module.exports = {
       const response = await interaction.reply({
         embeds: [setupEmbed],
         components: [menu],
-        flags: 64 // Reemplazo de ephemeral: true
+        ephemeral: true
       });
 
       const collector = response.createMessageComponentCollector({
@@ -249,7 +249,7 @@ module.exports = {
               break;
           }
         } else {
-          await i.reply({ content: '❌ No puedes usar este menú.', flags: 64 });
+          await i.reply({ content: '❌ No puedes usar este menú.', ephemeral: true });
         }
       });
 
@@ -279,7 +279,7 @@ module.exports = {
               
               await interaction.reply({
                 content: '✅ Configuración de canales guardada correctamente.',
-                flags: 64
+                ephemeral: true
               });
               break;
 
@@ -297,7 +297,7 @@ module.exports = {
 
               await interaction.reply({
                 content: '✅ Configuración de roles guardada correctamente.',
-                flags: 64
+                ephemeral: true
               });
               break;
 
@@ -315,7 +315,7 @@ module.exports = {
 
               await interaction.reply({
                 content: '✅ Configuración de moderación guardada correctamente.',
-                flags: 64
+                ephemeral: true
               });
               break;
 
@@ -333,7 +333,7 @@ module.exports = {
 
               await interaction.reply({
                 content: '✅ Configuración de logs guardada correctamente.',
-                flags: 64
+                ephemeral: true
               });
               break;
 
@@ -349,7 +349,7 @@ module.exports = {
 
               await interaction.reply({
                 content: '✅ Configuración de bienvenida guardada correctamente.',
-                flags: 64
+                ephemeral: true
               });
               break;
           }
@@ -357,7 +357,7 @@ module.exports = {
           console.error(error);
           await interaction.reply({
             content: '❌ Hubo un error al guardar la configuración.',
-            flags: 64
+            ephemeral: true
           });
         }
       };
@@ -381,7 +381,7 @@ module.exports = {
       console.error(error);
       await interaction.reply({ 
         content: 'Hubo un error al ejecutar el comando.',
-        flags: 64
+        ephemeral: true
       });
     }
   },

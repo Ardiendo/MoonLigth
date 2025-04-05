@@ -252,7 +252,21 @@ client.on('interactionCreate', async interaction => {
       )
       .setFooter({ text: 'Si el error persiste, contacta al desarrollador.' });
 
-    await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    try {
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    } catch (replyError) {
+      // Si no se puede responder directamente, intenta una actualización o una respuesta diferida
+      try {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ embeds: [errorEmbed] });
+        } else {
+          await interaction.deferReply({ ephemeral: true });
+          await interaction.editReply({ embeds: [errorEmbed] });
+        }
+      } catch (finalError) {
+        console.error(`No se pudo responder al error: ${finalError}`);
+      }
+    }
     }
   }
 );
