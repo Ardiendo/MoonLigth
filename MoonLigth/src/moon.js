@@ -102,14 +102,14 @@ client.on('ready', async () => {
     logger.info(`¡Conectado como ${client.user.tag}!`);
     const bot = client.user;
 
-    // Sistema de logs de inicio
+
     const logsChannel = client.channels.cache.get('1220480757697478697', '1356718029924335752');
     if (logsChannel) {
       const commandsList = Array.from(client.commands.keys()).join(', ');
       const loginEmbed = new EmbedBuilder()
         .setColor("Green")
-        .setTitle('🟢 Bot Iniciado')
-        .setDescription(`${bot.tag} se ha conectado correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
+        .setTitle('🟢 \ MoonLigth | ONLINE \ 🟢')
+        .setDescription(`${bot.tag} | Se inicio correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
         .addFields(
           { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
           { name: '👥 Usuarios', value: `${client.users.cache.size}`, inline: true },
