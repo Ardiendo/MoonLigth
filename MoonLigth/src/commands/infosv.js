@@ -3,7 +3,7 @@ const os = require('node:os');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('ping')
+    .setName('infosv')
     .setDescription('Muestra información sobre la latencia y el estado del bot.'),
   async execute(interaction) {
     try {

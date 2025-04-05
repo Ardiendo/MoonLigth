@@ -332,6 +332,7 @@ async function handleStatus(interaction, git) {
       .setDescription(status.isClean() ? '✅ El repositorio está limpio, no hay cambios pendientes.' : '⚠️ Hay cambios pendientes en el repositorio.')
       .addFields(
         { name: '🔗 Enlace del Repositorio', value: REPOSITORY_URL !== 'No configurado' ? `[Ver en GitHub](${REPOSITORY_URL})` : 'No configurado', inline: false }
+      )
       .addFields(
         { name: 'Rama Actual', value: branch.current, inline: true },
         { name: 'Estado con Remoto', value: branchStatus || 'No disponible', inline: true },
