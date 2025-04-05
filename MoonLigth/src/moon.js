@@ -102,7 +102,7 @@ client.on('ready', async () => {
     const bot = client.user;
 
     // Sistema de logs de inicio
-    const logsChannel = client.channels.cache.get('1220480757697478697');
+    const logsChannel = client.channels.cache.get('1220480757697478697', '1356718029924335752');
     if (logsChannel) {
       const commandsList = Array.from(client.commands.keys()).join(', ');
       const loginEmbed = new EmbedBuilder()
