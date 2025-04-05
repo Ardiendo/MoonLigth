@@ -137,7 +137,42 @@ module.exports = {
                     .addOptions(roles)
                 );
 
-              await i.update({ content: 'Selecciona el rol que deseas asignar:', components: [assignMenu] });
+              try {
+                await i.update({ 
+                  content: 'Selecciona el rol que deseas asignar:', 
+                  components: [assignMenu],
+                  fetchReply: true 
+                });
+
+                const assignCollector = i.message.createMessageComponentCollector({
+                  componentType: ComponentType.StringSelect,
+                  time: 30000
+                });
+
+                assignCollector.on('collect', async (roleSelection) => {
+                  const selectedRole = interaction.guild.roles.cache.get(roleSelection.values[0]);
+                  if (selectedRole) {
+                    try {
+                      const targetUser = await interaction.guild.members.fetch(interaction.user.id);
+                      await targetUser.roles.add(selectedRole);
+                      await roleSelection.update({
+                        content: `✅ Rol ${selectedRole.name} asignado correctamente.`,
+                        components: []
+                      });
+                    } catch (error) {
+                      await roleSelection.update({
+                        content: '❌ Error al asignar el rol. Verifica los permisos.',
+                        components: []
+                      });
+                    }
+                  }
+                });
+              } catch (error) {
+                await i.update({
+                  content: '❌ Ocurrió un error al procesar la asignación del rol.',
+                  components: []
+                });
+              }
               break;
 
             case 'remove':
