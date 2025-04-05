@@ -1,154 +1,225 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('tickets')
-    .setDescription('Administra el sistema de tickets.')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('crear')
-        .setDescription('Crea un nuevo ticket.'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('cerrar')
-        .setDescription('Cierra el ticket actual.'))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('añadir')
-        .setDescription('Añade un usuario al ticket.')
-        .addUserOption(option =>
-          option.setName('usuario')
-            .setDescription('El usuario que quieres añadir.')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('eliminar')
-        .setDescription('Elimina un usuario del ticket.')
-        .addUserOption(option =>
-          option.setName('usuario')
-            .setDescription('El usuario que quieres eliminar.')
-            .setRequired(true)))
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('panel')
-        .setDescription('Envía un panel de creación de tickets a un canal.')
-        .addChannelOption(option =>
-          option.setName('canal')
-            .setDescription('El canal donde quieres enviar el panel.')
-            .setRequired(true))),
+    .setDescription('Administra el sistema de tickets.'),
 
   async execute(interaction) {
-    const subcommand = interaction.options.getSubcommand();
-
     try {
-      if (subcommand === 'crear') {
-        await crearTicket(interaction);
-      } else if (subcommand === 'cerrar') {
-        await cerrarTicket(interaction);
-      } else if (subcommand === 'añadir') {
-        await añadirUsuario(interaction);
-      } else if (subcommand === 'eliminar') {
-        await eliminarUsuario(interaction);
-      } else if (subcommand === 'panel') {
-        await enviarPanel(interaction);
-      }
+      const mainEmbed = new EmbedBuilder()
+        .setColor("Random")
+        .setTitle('🎫 Sistema de Tickets')
+        .setDescription('Selecciona una acción del menú desplegable.')
+        .setThumbnail(interaction.client.user.displayAvatarURL())
+        .setTimestamp();
+
+      const menu = new ActionRowBuilder()
+        .addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId('ticket-menu')
+            .setPlaceholder('Selecciona una acción')
+            .addOptions([
+              {
+                label: 'Crear Ticket',
+                description: 'Crea un nuevo ticket de soporte',
+                value: 'create',
+                emoji: '📩'
+              },
+              {
+                label: 'Cerrar Ticket',
+                description: 'Cierra el ticket actual',
+                value: 'close',
+                emoji: '🔒'
+              },
+              {
+                label: 'Añadir Usuario',
+                description: 'Añade un usuario al ticket',
+                value: 'add',
+                emoji: '➕'
+              },
+              {
+                label: 'Eliminar Usuario',
+                description: 'Elimina un usuario del ticket',
+                value: 'remove',
+                emoji: '➖'
+              },
+              {
+                label: 'Panel de Tickets',
+                description: 'Crea un panel de tickets',
+                value: 'panel',
+                emoji: '📋'
+              }
+            ])
+        );
+
+      const response = await interaction.reply({
+        embeds: [mainEmbed],
+        components: [menu],
+        ephemeral: true
+      });
+
+      const collector = response.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        time: 60000
+      });
+
+      collector.on('collect', async i => {
+        if (i.user.id === interaction.user.id) {
+          switch (i.values[0]) {
+            case 'create':
+              const ticketChannel = await interaction.guild.channels.create({
+                name: `ticket-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                permissionOverwrites: [
+                  {
+                    id: interaction.guild.id,
+                    deny: [PermissionFlagsBits.ViewChannel],
+                  },
+                  {
+                    id: interaction.user.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                  },
+                ],
+              });
+
+              const ticketEmbed = new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('🎫 Nuevo Ticket')
+                .setDescription('Por favor, describe tu problema o solicitud. Un miembro del staff te atenderá pronto.')
+                .addFields(
+                  { name: 'Creado por', value: `${interaction.user}`, inline: true },
+                  { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+                );
+
+              const closeButton = new ActionRowBuilder()
+                .addComponents(
+                  new ButtonBuilder()
+                    .setCustomId('close-ticket')
+                    .setLabel('Cerrar Ticket')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🔒')
+                );
+
+              await ticketChannel.send({ embeds: [ticketEmbed], components: [closeButton] });
+              await i.update({ content: `Ticket creado en ${ticketChannel}`, embeds: [], components: [] });
+              break;
+
+            case 'close':
+              if (!interaction.channel.name.startsWith('ticket-')) {
+                await i.update({ content: '❌ Este comando solo puede ser usado en un canal de ticket.', embeds: [], components: [] });
+                return;
+              }
+
+              const closeEmbed = new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('🔒 Ticket Cerrado')
+                .setDescription(`Ticket cerrado por ${interaction.user}`)
+                .setTimestamp();
+
+              await interaction.channel.send({ embeds: [closeEmbed] });
+              setTimeout(() => interaction.channel.delete(), 5000);
+              await i.update({ content: 'Cerrando ticket en 5 segundos...', embeds: [], components: [] });
+              break;
+
+            case 'add':
+              if (!interaction.channel.name.startsWith('ticket-')) {
+                await i.update({ content: '❌ Este comando solo puede ser usado en un canal de ticket.', embeds: [], components: [] });
+                return;
+              }
+
+              const userSelect = new ActionRowBuilder()
+                .addComponents(
+                  new StringSelectMenuBuilder()
+                    .setCustomId('add-user')
+                    .setPlaceholder('Selecciona un usuario')
+                    .addOptions(
+                      interaction.guild.members.cache
+                        .filter(member => !member.user.bot)
+                        .first(25)
+                        .map(member => ({
+                          label: member.user.username,
+                          value: member.id,
+                          emoji: '👤'
+                        }))
+                    )
+                );
+
+              await i.update({ content: 'Selecciona el usuario que quieres añadir:', components: [userSelect] });
+              break;
+
+            case 'remove':
+              if (!interaction.channel.name.startsWith('ticket-')) {
+                await i.update({ content: '❌ Este comando solo puede ser usado en un canal de ticket.', embeds: [], components: [] });
+                return;
+              }
+
+              const removeSelect = new ActionRowBuilder()
+                .addComponents(
+                  new StringSelectMenuBuilder()
+                    .setCustomId('remove-user')
+                    .setPlaceholder('Selecciona un usuario')
+                    .addOptions(
+                      interaction.channel.permissionOverwrites.cache
+                        .filter(perm => perm.type === 1)
+                        .first(25)
+                        .map(perm => ({
+                          label: interaction.guild.members.cache.get(perm.id)?.user.username || 'Usuario Desconocido',
+                          value: perm.id,
+                          emoji: '👤'
+                        }))
+                    )
+                );
+
+              await i.update({ content: 'Selecciona el usuario que quieres eliminar:', components: [removeSelect] });
+              break;
+
+            case 'panel':
+              if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+                await i.update({ content: '❌ No tienes permisos para crear paneles de tickets.', embeds: [], components: [] });
+                return;
+              }
+
+              const panelEmbed = new EmbedBuilder()
+                .setColor('Blue')
+                .setTitle('🎫 Sistema de Tickets')
+                .setDescription('¡Bienvenido al sistema de tickets!\nPara crear un ticket, haz clic en el botón de abajo.')
+                .addFields(
+                  { name: '📝 Uso', value: 'Los tickets son para consultas, reportes o ayuda.' },
+                  { name: '⚠️ Importante', value: 'No abuses del sistema de tickets.' }
+                )
+                .setTimestamp();
+
+              const createButton = new ActionRowBuilder()
+                .addComponents(
+                  new ButtonBuilder()
+                    .setCustomId('create-ticket')
+                    .setLabel('Crear Ticket')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('📩')
+                );
+
+              await interaction.channel.send({ embeds: [panelEmbed], components: [createButton] });
+              await i.update({ content: '✅ Panel de tickets creado.', embeds: [], components: [] });
+              break;
+          }
+        } else {
+          await i.reply({ content: '❌ No puedes usar este menú.', ephemeral: true });
+        }
+      });
+
+      collector.on('end', () => {
+        menu.components[0].setDisabled(true);
+        interaction.editReply({ components: [menu] }).catch(() => {});
+      });
+
     } catch (error) {
-      console.error('Error al ejecutar el comando:', error);
-      await interaction.reply({ content: 'Hubo un error al ejecutar el comando.', ephemeral: true });
+      console.error(error);
+      await interaction.reply({ 
+        content: 'Hubo un error al ejecutar el comando.',
+        ephemeral: true 
+      });
     }
   },
 };
-
-async function crearTicket(interaction) {
-  const guild = interaction.guild;
-  const usuario = interaction.user;
-
-  const canalTicket = await guild.channels.create({
-    name: `ticket-${usuario.username}`,
-    type: ChannelType.GuildText,
-    permissionOverwrites: [
-      {
-        id: guild.id,
-        deny: [PermissionFlagsBits.ViewChannel],
-      },
-      {
-        id: usuario.id,
-        allow: [PermissionFlagsBits.ViewChannel],
-      },
-    ],
-  });
-
-  const embed = new EmbedBuilder()
-    .setColor('Random')
-    .setTitle('Nuevo Ticket')
-    .setDescription('Describe tu problema o solicitud aquí. Un miembro del personal te atenderá en breve.');
-
-  await canalTicket.send({ content: `${usuario} ha abierto un nuevo ticket.`, embeds: [embed] });
-
-  await interaction.reply({ content: `Tu ticket ha sido creado en ${canalTicket}.`, ephemeral: true });
-}
-
-async function cerrarTicket(interaction) {
-  const canal = interaction.channel;
-
-  if (!canal.name.startsWith('ticket-')) {
-    return interaction.reply({ content: 'Este comando solo puede ser usado en un canal de ticket.', ephemeral: true });
-  }
-
-  await interaction.reply('Cerrando el ticket...');
-  await canal.delete();
-}
-
-async function añadirUsuario(interaction) {
-  const canal = interaction.channel;
-  const usuario = interaction.options.getUser('usuario');
-
-  if (!canal.name.startsWith('ticket-')) {
-    return interaction.reply({ content: 'Este comando solo puede ser usado en un canal de ticket.', ephemeral: true });
-  }
-
-  try {
-    await canal.permissionOverwrites.edit(usuario, { ViewChannel: true });
-    await interaction.reply({ content: `${usuario} ha sido añadido al ticket.`, ephemeral: true });
-  } catch (error) {
-    console.error('Error al añadir el usuario al ticket:', error);
-    await interaction.reply({ content: 'Hubo un error al añadir el usuario al ticket.', ephemeral: true });
-  }
-}
-
-async function eliminarUsuario(interaction) {
-  const canal = interaction.channel;
-  const usuario = interaction.options.getUser('usuario');
-
-  if (!canal.name.startsWith('ticket-')) {
-    return interaction.reply({ content: 'Este comando solo puede ser usado en un canal de ticket.', ephemeral: true });
-  }
-
-  try {
-    await canal.permissionOverwrites.edit(usuario, { ViewChannel: false });
-    await interaction.reply({ content: `${usuario} ha sido eliminado del ticket.`, ephemeral: true });
-  } catch (error) {
-    console.error('Error al eliminar el usuario del ticket:', error);
-    await interaction.reply({ content: 'Hubo un error al eliminar el usuario al ticket.', ephemeral: true });
-  }
-}
-
-async function enviarPanel(interaction) {
-  const canal = interaction.options.getChannel('canal');
-
-  const embed = new EmbedBuilder()
-    .setColor('Random')
-    .setTitle('Crear un Ticket')
-    .setDescription('Haz clic en el botón de abajo para abrir un nuevo ticket.');
-
-  const boton = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('crear-ticket')
-        .setLabel('Crear Ticket')
-        .setStyle(ButtonStyle.Primary),
-    );
-
-  await canal.send({ embeds: [embed], components: [boton] });
-  await interaction.reply({ content: 'Panel de tickets enviado.', ephemeral: true });
-}
