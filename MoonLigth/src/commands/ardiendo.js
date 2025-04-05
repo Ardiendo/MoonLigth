@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
@@ -10,6 +9,13 @@ module.exports = {
   async execute(interaction) {
     const developerId = process.env.DEVELOPER_ID;
     const DEVELOPER_TAG = process.env.DEVELOPER_TAG;
+
+    if (!developerId) {
+      return interaction.reply({ 
+        content: 'Error: ID del desarrollador no configurado correctamente.',
+        ephemeral: true 
+      });
+    }
 
     try {
       const developer = await interaction.client.users.fetch(developerId);
