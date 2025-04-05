@@ -1,5 +1,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const ServerConfig = require('../models/serverConfig');
+const mongoose = require('mongoose');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -9,6 +11,15 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      // Verificar si ya existe una configuración para este servidor
+      let serverConfig = await ServerConfig.findOne({ guildId: interaction.guild.id });
+      
+      // Si no existe, crear una nueva
+      if (!serverConfig) {
+        serverConfig = new ServerConfig({ guildId: interaction.guild.id });
+        await serverConfig.save();
+      }
+
       const setupEmbed = new EmbedBuilder()
         .setColor("Random")
         .setTitle('⚙️ Panel de Configuración')
@@ -58,7 +69,7 @@ module.exports = {
       const response = await interaction.reply({
         embeds: [setupEmbed],
         components: [menu],
-        ephemeral: true
+        flags: 64 // Reemplazo de ephemeral: true
       });
 
       const collector = response.createMessageComponentCollector({
@@ -80,19 +91,22 @@ module.exports = {
                 .setCustomId('general-channel')
                 .setLabel('ID del Canal General')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.channels.general || '');
 
               const announcementChannel = new TextInputBuilder()
                 .setCustomId('announcement-channel')
                 .setLabel('ID del Canal de Anuncios')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.channels.announcement || '');
 
               const welcomeChannel = new TextInputBuilder()
                 .setCustomId('welcome-channel')
                 .setLabel('ID del Canal de Bienvenida')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.channels.welcome || '');
 
               const firstRow = new ActionRowBuilder().addComponents(generalChannel);
               const secondRow = new ActionRowBuilder().addComponents(announcementChannel);
@@ -111,19 +125,22 @@ module.exports = {
                 .setCustomId('default-role')
                 .setLabel('ID del Rol por Defecto')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.roles.default || '');
 
               const modRole = new TextInputBuilder()
                 .setCustomId('mod-role')
                 .setLabel('ID del Rol de Moderación')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.roles.moderator || '');
 
               const levelRole = new TextInputBuilder()
                 .setCustomId('level-role')
                 .setLabel('ID del Rol de Nivel (separados por ,)')
                 .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.roles.levelRoles.join(',') || '');
 
               roleModal.addComponents(
                 new ActionRowBuilder().addComponents(defaultRole),
@@ -143,19 +160,22 @@ module.exports = {
                 .setCustomId('anti-spam')
                 .setLabel('Límite de mensajes (por 5 segundos)')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.moderation.antiSpam.toString() || '5');
 
               const autoMod = new TextInputBuilder()
                 .setCustomId('auto-mod')
                 .setLabel('Palabras prohibidas (separadas por ,)')
                 .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.moderation.badWords.join(',') || '');
 
               const punishment = new TextInputBuilder()
                 .setCustomId('punishment')
                 .setLabel('Tipo de castigo (mute/kick/ban)')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.moderation.punishment || 'mute');
 
               modModal.addComponents(
                 new ActionRowBuilder().addComponents(antiSpam),
@@ -175,19 +195,22 @@ module.exports = {
                 .setCustomId('mod-logs')
                 .setLabel('ID del Canal de Logs de Moderación')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.logs.moderation || '');
 
               const serverLogs = new TextInputBuilder()
                 .setCustomId('server-logs')
                 .setLabel('ID del Canal de Logs del Servidor')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.logs.server || '');
 
               const messageLogs = new TextInputBuilder()
                 .setCustomId('message-logs')
                 .setLabel('ID del Canal de Logs de Mensajes')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(true);
+                .setRequired(true)
+                .setValue(serverConfig.logs.messages || '');
 
               logsModal.addComponents(
                 new ActionRowBuilder().addComponents(modLogs),
@@ -208,13 +231,14 @@ module.exports = {
                 .setLabel('Mensaje de Bienvenida')
                 .setStyle(TextInputStyle.Paragraph)
                 .setRequired(true)
-                .setValue('¡Bienvenido {user} a {server}!');
+                .setValue(serverConfig.welcome.message || '¡Bienvenido {user} a {server}!');
 
               const welcomeImage = new TextInputBuilder()
                 .setCustomId('welcome-image')
                 .setLabel('URL de la Imagen de Bienvenida')
                 .setStyle(TextInputStyle.Short)
-                .setRequired(false);
+                .setRequired(false)
+                .setValue(serverConfig.welcome.image || '');
 
               welcomeModal.addComponents(
                 new ActionRowBuilder().addComponents(welcomeMessage),
@@ -225,15 +249,21 @@ module.exports = {
               break;
           }
         } else {
-          await i.reply({ content: '❌ No puedes usar este menú.', ephemeral: true });
+          await i.reply({ content: '❌ No puedes usar este menú.', flags: 64 });
         }
       });
 
       // Manejador de envío de modales
-      interaction.client.on('interactionCreate', async interaction => {
+      const modalHandler = async interaction => {
         if (!interaction.isModalSubmit()) return;
 
         try {
+          // Obtener la configuración actual
+          let serverConfig = await ServerConfig.findOne({ guildId: interaction.guild.id });
+          if (!serverConfig) {
+            serverConfig = new ServerConfig({ guildId: interaction.guild.id });
+          }
+
           switch (interaction.customId) {
             case 'channel-config':
               // Guardar configuración de canales
@@ -241,9 +271,15 @@ module.exports = {
               const announcementId = interaction.fields.getTextInputValue('announcement-channel');
               const welcomeId = interaction.fields.getTextInputValue('welcome-channel');
               
+              serverConfig.channels.general = generalId;
+              serverConfig.channels.announcement = announcementId;
+              serverConfig.channels.welcome = welcomeId;
+              
+              await serverConfig.save();
+              
               await interaction.reply({
                 content: '✅ Configuración de canales guardada correctamente.',
-                ephemeral: true
+                flags: 64
               });
               break;
 
@@ -251,23 +287,35 @@ module.exports = {
               // Guardar configuración de roles
               const defaultRoleId = interaction.fields.getTextInputValue('default-role');
               const modRoleId = interaction.fields.getTextInputValue('mod-role');
-              const levelRoles = interaction.fields.getTextInputValue('level-role').split(',');
+              const levelRoles = interaction.fields.getTextInputValue('level-role').split(',').map(role => role.trim());
+
+              serverConfig.roles.default = defaultRoleId;
+              serverConfig.roles.moderator = modRoleId;
+              serverConfig.roles.levelRoles = levelRoles;
+              
+              await serverConfig.save();
 
               await interaction.reply({
                 content: '✅ Configuración de roles guardada correctamente.',
-                ephemeral: true
+                flags: 64
               });
               break;
 
             case 'mod-config':
               // Guardar configuración de moderación
-              const spamLimit = interaction.fields.getTextInputValue('anti-spam');
-              const badWords = interaction.fields.getTextInputValue('auto-mod').split(',');
+              const spamLimit = parseInt(interaction.fields.getTextInputValue('anti-spam'));
+              const badWords = interaction.fields.getTextInputValue('auto-mod').split(',').map(word => word.trim());
               const punishmentType = interaction.fields.getTextInputValue('punishment');
+
+              serverConfig.moderation.antiSpam = spamLimit;
+              serverConfig.moderation.badWords = badWords;
+              serverConfig.moderation.punishment = punishmentType;
+              
+              await serverConfig.save();
 
               await interaction.reply({
                 content: '✅ Configuración de moderación guardada correctamente.',
-                ephemeral: true
+                flags: 64
               });
               break;
 
@@ -277,9 +325,15 @@ module.exports = {
               const serverLogsId = interaction.fields.getTextInputValue('server-logs');
               const messageLogsId = interaction.fields.getTextInputValue('message-logs');
 
+              serverConfig.logs.moderation = modLogsId;
+              serverConfig.logs.server = serverLogsId;
+              serverConfig.logs.messages = messageLogsId;
+              
+              await serverConfig.save();
+
               await interaction.reply({
                 content: '✅ Configuración de logs guardada correctamente.',
-                ephemeral: true
+                flags: 64
               });
               break;
 
@@ -288,9 +342,14 @@ module.exports = {
               const welcomeMsg = interaction.fields.getTextInputValue('welcome-message');
               const welcomeImg = interaction.fields.getTextInputValue('welcome-image');
 
+              serverConfig.welcome.message = welcomeMsg;
+              serverConfig.welcome.image = welcomeImg;
+              
+              await serverConfig.save();
+
               await interaction.reply({
                 content: '✅ Configuración de bienvenida guardada correctamente.',
-                ephemeral: true
+                flags: 64
               });
               break;
           }
@@ -298,10 +357,20 @@ module.exports = {
           console.error(error);
           await interaction.reply({
             content: '❌ Hubo un error al guardar la configuración.',
-            ephemeral: true
+            flags: 64
           });
         }
-      });
+      };
+
+      // Registrar el manejador de modales una vez
+      if (!interaction.client.modalHandlers) {
+        interaction.client.modalHandlers = new Set();
+      }
+      
+      if (!interaction.client.modalHandlers.has('setup-modals')) {
+        interaction.client.on('interactionCreate', modalHandler);
+        interaction.client.modalHandlers.add('setup-modals');
+      }
 
       collector.on('end', () => {
         menu.components[0].setDisabled(true);
@@ -312,7 +381,7 @@ module.exports = {
       console.error(error);
       await interaction.reply({ 
         content: 'Hubo un error al ejecutar el comando.',
-        ephemeral: true 
+        flags: 64
       });
     }
   },

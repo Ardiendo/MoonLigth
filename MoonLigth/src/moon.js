@@ -58,6 +58,7 @@ const client = new Client({
 const Dev = '_.aari._';
 const MoonLigthVersion = '1.1';
 client.commands = new Collection();
+client.events = new Collection(); // Added for event storage
 
 const loadedCommands = new Set();
 
@@ -107,7 +108,7 @@ client.on('ready', async () => {
       const commandsList = Array.from(client.commands.keys()).join(', ');
       const loginEmbed = new EmbedBuilder()
         .setColor("Green")
-        .setTitle('🟢 MoonLigth | Inicio correcto.')
+        .setTitle('🟢 Bot Iniciado')
         .setDescription(`${bot.tag} se ha conectado correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
         .addFields(
           { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
@@ -255,5 +256,25 @@ client.on('interactionCreate', async interaction => {
     }
   }
 );
+
+// Cargar eventos
+const eventsPath = path.join(__dirname, 'events');
+if (fs.existsSync(eventsPath)) {
+  const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+  for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+
+    if (event.once) {
+      client.once(event.name, (...args) => event.execute(...args));
+    } else {
+      client.on(event.name, (...args) => event.execute(...args));
+    }
+
+    client.events.set(event.name, event);
+    logger.info(`✅ Evento cargado: ${event.name}`);
+  }
+}
 
 client.login(token);
