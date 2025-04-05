@@ -107,7 +107,7 @@ client.on('ready', async () => {
       const commandsList = Array.from(client.commands.keys()).join(', ');
       const loginEmbed = new EmbedBuilder()
         .setColor("Green")
-        .setTitle('🟢 Bot Iniciado')
+        .setTitle('🟢 MoonLigth | Inicio correcto.')
         .setDescription(`${bot.tag} se ha conectado correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
         .addFields(
           { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
