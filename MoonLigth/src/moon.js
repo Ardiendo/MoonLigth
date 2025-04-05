@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const { Client, Intents, Partials, Collection, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
@@ -65,12 +64,12 @@ const loadedCommands = new Set();
 for (const file of commandFiles) {
   try {
     const command = require(`./commands/${file}`);
-    
+
     if (loadedCommands.has(command.data.name)) {
       logger.warn(`⚠️ Comando duplicado encontrado: ${command.data.name} en ${file}`);
       continue;
     }
-    
+
     loadedCommands.add(command.data.name);
     client.commands.set(command.data.name, command);
     commands.push(command.data.toJSON());
@@ -101,7 +100,7 @@ client.on('ready', async () => {
 
     logger.info(`¡Conectado como ${client.user.tag}!`);
     const bot = client.user;
-    
+
     // Sistema de logs de inicio
     const logsChannel = client.channels.cache.get('1220480757697478697');
     if (logsChannel) {
@@ -128,10 +127,10 @@ client.on('ready', async () => {
 
     try {
       logger.info('🚀 Actualizando comandos globalmente...');
-      
+
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       logger.info('✅ Comandos actualizados globalmente con éxito.');
-      
+
       if (NODE_ENV === 'development' && guildId) {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
         logger.info('✅ Comandos actualizados en el servidor de desarrollo con éxito.');
@@ -184,23 +183,49 @@ client.on('ready', async () => {
 
     logger.info('✅ Rich Presence configurada.');
   } catch (error) {
-    logger.error('❌ Ya la hemos liao:', error);
-    const debuggingChannelId = '1356718029924335752';
-    const debuggingChannel = client.channels.cache.get(debuggingChannelId);
-    if (debuggingChannel) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setTitle('Error en el evento "ready"')
-        .setDescription(`Se ha producido un error al iniciar el bot: ${error.message}`)
-        .setTimestamp();
-      debuggingChannel.send({ embeds: [embed] });
-    } else {
-      logger.warn('No se pudo encontrar el canal de depuración para enviar el mensaje de error.');
+      logger.error('❌ Error crítico:', error);
+      const debuggingChannelId = '1356718029924335752';
+      const debuggingChannel = client.channels.cache.get(debuggingChannelId);
+      if (debuggingChannel) {
+        const errorEmbed = new EmbedBuilder()
+          .setColor('Red')
+          .setTitle('⚠️ Error Crítico Detectado')
+          .setDescription('Se ha producido un error durante el inicio del bot')
+          .addFields(
+            { 
+              name: '🔍 Detalles del Error',
+              value: `\`\`\`js\n${error.stack || error.message}\`\`\``,
+              inline: false 
+            },
+            { 
+              name: '⏰ Timestamp',
+              value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+              inline: true 
+            },
+            {
+              name: '🔧 Tipo de Error',
+              value: error.name || 'Error Desconocido',
+              inline: true
+            },
+            {
+              name: '💻 Estado del Sistema',
+              value: `RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB\nUptime: ${Math.floor(process.uptime())}s`,
+              inline: true
+            }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'MoonLigth Error Handler', iconURL: client.user?.displayAvatarURL() });
+
+        await debuggingChannel.send({ embeds: [errorEmbed] });
+      } else {
+        logger.error('No se pudo encontrar el canal de depuración para enviar el mensaje de error.');
+      }
+
+      if (error.name === 'MoonLigth | Error Ready') {
+        logger.error('Error crítico detectado. Iniciando apagado de emergencia...');
+        process.exit(1);
+      }
     }
-    if (error.name === 'MoonLigth | Error Ready') {
-      process.exit(1);
-    }
-  }
 });
 
 client.on('interactionCreate', async interaction => {
