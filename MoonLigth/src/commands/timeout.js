@@ -1,8 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, WebhookClient } = require('discord.js');
+
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, WebhookClient } = require('discord.js');
 require('dotenv').config();
 
 const webhookURL = process.env.TIMEOUT_WEBHOOK_URL;
-const webhookClient = new WebhookClient({ url: webhookURL });
+const webhookClient = webhookURL ? new WebhookClient({ url: webhookURL }) : null;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -30,9 +31,8 @@ module.exports = {
             const duracion = interaction.options.getString('duracion');
             const razon = interaction.options.getString('razon') || 'No se proporcionó ninguna razón.';
 
-            
-            if (typeof duracion !== 'string') {
-                return interaction.reply({ content: 'Error: La duración proporcionada no es válida.', ephemeral: true });
+            if (!duracion) {
+                return interaction.reply({ content: 'Error: La duración es requerida.', ephemeral: true });
             }
 
             const ms = convertirDuracion(duracion);
@@ -52,11 +52,14 @@ module.exports = {
                         { name: 'Razón', value: razon, inline: true },
                     )
                     .setTimestamp();
-                await webhookClient.send({ embeds: [embed] });
+
+                if (webhookClient) {
+                    await webhookClient.send({ embeds: [embed] });
+                }
 
                 await interaction.reply({ content: `${usuario} ha recibido un tiempo de espera de ${duracion}.`, ephemeral: true });
             } catch (error) {
-                console.error(`\n❌ Error al aplicar el tiempo de espera: \n${error}\n`);
+                console.error(`Error al aplicar el tiempo de espera:`, error);
                 await interaction.reply({ content: 'Hubo un error al aplicar el tiempo de espera.', ephemeral: true });
             }
         } else if (subcommand === 'quitar') {
@@ -71,11 +74,14 @@ module.exports = {
                     .setDescription(`Se ha quitado el tiempo de espera de ${usuario}.`)
                     .addFields({ name: 'Moderador', value: interaction.user.tag, inline: true })
                     .setTimestamp();
-                await webhookClient.send({ embeds: [embed] });
+
+                if (webhookClient) {
+                    await webhookClient.send({ embeds: [embed] });
+                }
 
                 await interaction.reply({ content: `Se ha quitado el tiempo de espera de ${usuario}.`, ephemeral: true });
             } catch (error) {
-                console.error(`\n❌ Error al quitar el tiempo de espera: \n${error}\n`);
+                console.error(`Error al quitar el tiempo de espera:`, error);
                 await interaction.reply({ content: 'Hubo un error al quitar el tiempo de espera.', ephemeral: true });
             }
         }
@@ -83,7 +89,7 @@ module.exports = {
 };
 
 function convertirDuracion(duracion) {
-    if (typeof duracion !== 'string') {
+    if (!duracion || typeof duracion !== 'string') {
         return null;
     }
 
