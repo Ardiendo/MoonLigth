@@ -105,14 +105,16 @@ client.on('ready', async () => {
     // Sistema de logs de inicio
     const logsChannel = client.channels.cache.get('1220480757697478697');
     if (logsChannel) {
+      const commandsList = Array.from(client.commands.keys()).join(', ');
       const loginEmbed = new EmbedBuilder()
         .setColor("Green")
         .setTitle('🟢 Bot Iniciado')
-        .setDescription(`${bot.tag} se ha conectado correctamente`)
+        .setDescription(`${bot.tag} se ha conectado correctamente\n\n**Comandos Actualizados:**\n\`\`\`${commandsList}\`\`\``)
         .addFields(
           { name: '📊 Servidores', value: `${client.guilds.cache.size}`, inline: true },
           { name: '👥 Usuarios', value: `${client.users.cache.size}`, inline: true },
-          { name: '🕒 Tiempo de inicio', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+          { name: '🕒 Tiempo de inicio', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+          { name: '🛠️ Total Comandos', value: `${client.commands.size}`, inline: true }
         )
         .setThumbnail(bot.displayAvatarURL())
         .setFooter({ text: `ID del Bot: ${bot.id}` })
